@@ -55,34 +55,20 @@ fun DetalleUbicacionPickingScreen(
 ) {
 
     val context = LocalContext.current
-    var detalle by remember { mutableStateOf<List<PickingDetalleUbicacionResponse>>(emptyList()) }
-    var pickingProcesado by remember { mutableStateOf(false) }
-    var pickingCompleto by remember { mutableStateOf(false) }
 
-
-    /*
-    LaunchedEffect(AbsEntry) {
-
-        try {
-
-            val resultado = apiService.obtenerUbicacionPickingDetalle(
-                AbsEntry,
-                BinAbs
-            )
-
-            detalle = resultado.data
-
-
-        } catch (e: Exception) {
-
-            Log.e("*MAKITA*", e.message ?: "")
-
-        }
-
+    var detalle by remember {
+        mutableStateOf<List<PickingDetalleUbicacionResponse>>(emptyList())
     }
-    */
 
-    LaunchedEffect(AbsEntry) {
+    var pickingProcesado by remember {
+        mutableStateOf(false)
+    }
+
+    var pickingCompleto by remember {
+        mutableStateOf(false)
+    }
+
+    LaunchedEffect(AbsEntry, BinAbs) {
 
         try {
 
@@ -93,6 +79,24 @@ fun DetalleUbicacionPickingScreen(
                 )
 
             detalle = resultado.data
+
+            Log.d(
+                "*MAKITA*PICKING*",
+                "DETALLES UBICACION = ${resultado.data.size}"
+            )
+
+            resultado.data.forEach {
+                Log.d(
+                    "*MAKITA*PICKING*",
+                    "IdDetalle=${it.IdDetalle} | " +
+                            "ItemCode=${it.ItemCode} | " +
+                            "Bin=${it.BinCode} | " +
+                            "CantidadLiberada=${it.CantidadLiberada} | " +
+                            "CantidadCapturada=${it.CantidadCapturada} | " +
+                          //  "CantidadPickeadaSAP=${it.CantidadPickeadaSAP} | " +
+                            "CantidadPickeadaBin=${it.CantidadPickeadaBin}"
+                )
+            }
 
             val estadoPicking =
                 apiService.obtenerEstadoPicking(AbsEntry)
@@ -121,8 +125,21 @@ fun DetalleUbicacionPickingScreen(
         }
     }
 
-    val item = detalle.firstOrNull()
+    val item =
+        detalle.firstOrNull {
 
+            val cantidadLiberada =
+                it.CantidadLiberada
+                    .toString()
+                    .replace(",", ".")
+                    .toDoubleOrNull()
+                    ?: 0.0
+
+            val cantidadCapturada =
+                it.CantidadCapturada ?: 0.0
+
+            cantidadCapturada < cantidadLiberada
+        }
 
     Surface(
         modifier = Modifier.fillMaxSize()
@@ -145,7 +162,7 @@ fun DetalleUbicacionPickingScreen(
             ) {
 
                 Column(
-                    modifier =  Modifier.padding(
+                    modifier = Modifier.padding(
                         start = 16.dp,
                         top = 16.dp,
                         end = 16.dp,
@@ -154,8 +171,11 @@ fun DetalleUbicacionPickingScreen(
                 ) {
 
                     IconButton(
-                        onClick = { navController.popBackStack() }
+                        onClick = {
+                            navController.popBackStack()
+                        }
                     ) {
+
                         Icon(
                             imageVector = Icons.Default.ArrowBack,
                             contentDescription = null,
@@ -170,7 +190,9 @@ fun DetalleUbicacionPickingScreen(
                         fontSize = 20.sp
                     )
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(
+                        modifier = Modifier.height(8.dp)
+                    )
 
                     Row(
                         modifier = Modifier.fillMaxWidth()
@@ -192,7 +214,6 @@ fun DetalleUbicacionPickingScreen(
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 18.sp
                             )
-
                         }
 
                         Column(
@@ -212,12 +233,12 @@ fun DetalleUbicacionPickingScreen(
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 18.sp
                             )
-
                         }
-
                     }
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(
+                        modifier = Modifier.height(8.dp)
+                    )
 
                     Text(
                         text = "UBICACION",
@@ -225,7 +246,9 @@ fun DetalleUbicacionPickingScreen(
                         fontSize = 12.sp
                     )
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(
+                        modifier = Modifier.height(8.dp)
+                    )
 
                     Text(
                         text = "${item?.BinCode ?: ""} ($BinAbs)",
@@ -233,7 +256,6 @@ fun DetalleUbicacionPickingScreen(
                         fontWeight = FontWeight.Bold,
                         fontSize = 18.sp
                     )
-
 
                     Button(
                         onClick = {
@@ -258,21 +280,19 @@ fun DetalleUbicacionPickingScreen(
                                     )
 
                                     if (respuesta.success) {
+
                                         navController.navigate(
                                             "procesadoPicking/" +
                                                     "${respuesta.idCabecera}/" +
-                                                    "${item?.IdDetalle}/" +
-                                                    "$AbsEntry/" +
-                                                    "${item?.BinCode}/" +
-                                                    "$BinAbs/" +
-                                                    "${item?.WhsCode}/" +
-                                                    "${item?.ItemCode}"
+                                                    "$AbsEntry"
                                         )
 
                                     } else {
+
                                         Toast.makeText(
                                             context,
-                                            respuesta.message ?: "El Picking no ha sido iniciado",
+                                            respuesta.message
+                                                ?: "El Picking no ha sido iniciado",
                                             Toast.LENGTH_LONG
                                         ).show()
                                     }
@@ -287,7 +307,8 @@ fun DetalleUbicacionPickingScreen(
 
                                     Toast.makeText(
                                         context,
-                                        e.message ?: "Error al consultar el Picking",
+                                        e.message
+                                            ?: "Error al consultar el Picking",
                                         Toast.LENGTH_LONG
                                     ).show()
                                 }
@@ -314,7 +335,9 @@ fun DetalleUbicacionPickingScreen(
                             modifier = Modifier.size(22.dp)
                         )
 
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(
+                            modifier = Modifier.width(8.dp)
+                        )
 
                         Text(
                             text = "REVISAR ITEM PROCESADO",
@@ -322,12 +345,12 @@ fun DetalleUbicacionPickingScreen(
                             fontSize = 16.sp
                         )
                     }
-
                 }
-
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(
+                modifier = Modifier.height(8.dp)
+            )
 
             item?.let {
 
@@ -361,18 +384,20 @@ fun DetalleUbicacionPickingScreen(
                                 maxLines = 2
                             )
 
-                            Spacer(modifier = Modifier.height(4.dp))
+                            Spacer(
+                                modifier = Modifier.height(4.dp)
+                            )
 
                             Text(
                                 text = "${it.ItmsGrpCod ?: ""} - ${it.ItmsGrpNam ?: ""}",
                                 fontSize = 11.sp,
                                 color = Color.Gray
                             )
-
                         }
 
-                        //Spacer(modifier = Modifier.width(8.dp))
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(
+                            modifier = Modifier.height(8.dp)
+                        )
 
                         ElevatedCard(
                             shape = RectangleShape,
@@ -404,18 +429,15 @@ fun DetalleUbicacionPickingScreen(
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 20.sp
                                 )
-
                             }
-
                         }
-
                     }
-
                 }
-
             }
 
-            Spacer(modifier = Modifier.weight(1f))
+            Spacer(
+                modifier = Modifier.weight(1f)
+            )
 
             Button(
                 onClick = {
@@ -424,47 +446,94 @@ fun DetalleUbicacionPickingScreen(
 
                         try {
 
-                            val request = IniciarPickingLecturaRequest(
-                                usuario = usuario
-                            )
+                            val request =
+                                IniciarPickingLecturaRequest(
+                                    usuario = usuario
+                                )
 
-                            val respuesta = apiService.iniciarPickingLectura(
-                                AbsEntry,
-                                request
-                            )
+                            val respuesta =
+                                apiService.iniciarPickingLectura(
+                                    AbsEntry,
+                                    request
+                                )
 
-                            Log.d("*MAKITA*", "Respuesta: $respuesta")
+                            Log.d(
+                                "*MAKITA*",
+                                "Respuesta: $respuesta"
+                            )
 
                             if (respuesta.success) {
 
-                                Log.d(
-                                    "*MAKITA*PICKING*",
-                                    "IdDetalle = ${item?.IdDetalle}"
-                                )
-
-                                // Volver a consultar porque ahora PickingDetalle
-                                // ya existe en SQL Server
                                 val resultadoActualizado =
                                     apiService.obtenerUbicacionPickingDetalle(
                                         AbsEntry,
                                         BinAbs
                                     )
 
-                                detalle = resultadoActualizado.data
+                                detalle =
+                                    resultadoActualizado.data
+
+                                resultadoActualizado.data.forEach {
+                                    Log.d(
+                                        "*MAKITA*PICKING*",
+                                        "POST INICIO -> " +
+                                                "IdDetalle=${it.IdDetalle} | " +
+                                                "ItemCode=${it.ItemCode} | " +
+                                                "CantidadLiberada=${it.CantidadLiberada} | " +
+                                                "CantidadCapturada=${it.CantidadCapturada}"
+                                    )
+                                }
 
                                 val itemActualizado =
-                                    resultadoActualizado.data.firstOrNull()
+                                    resultadoActualizado.data.firstOrNull {
 
+                                        val cantidadLiberada =
+                                            it.CantidadLiberada
+                                                .toString()
+                                                .replace(",", ".")
+                                                .toDoubleOrNull()
+                                                ?: 0.0
+
+                                        val cantidadCapturada =
+                                            it.CantidadCapturada ?: 0.0
+
+                                        cantidadCapturada < cantidadLiberada
+                                    }
+
+                                if (itemActualizado == null) {
+
+                                    Log.e(
+                                        "*MAKITA*PICKING*",
+                                        "NO HAY DETALLE PENDIENTE | " +
+                                                "AbsEntry=$AbsEntry | " +
+                                                "BinAbs=$BinAbs"
+                                    )
+
+                                    Toast.makeText(
+                                        context,
+                                        "No se encontró un detalle pendiente para esta ubicación.",
+                                        Toast.LENGTH_LONG
+                                    ).show()
+
+                                    return@launch
+                                }
+
+                                Log.d(
+                                    "*MAKITA*PICKING*",
+                                    "DETALLE PENDIENTE = " +
+                                            "IdDetalle=${itemActualizado.IdDetalle} | " +
+                                            "ItemCode=${itemActualizado.ItemCode}"
+                                )
 
                                 navController.navigate(
                                     "lecturaPicking/" +
                                             "${respuesta.idCabecera}/" +
-                                            "${itemActualizado?.IdDetalle}/" +
+                                            "${itemActualizado.IdDetalle}/" +
                                             "$AbsEntry/" +
-                                            "${itemActualizado?.BinCode}/" +
+                                            "${itemActualizado.BinCode}/" +
                                             "$BinAbs/" +
-                                            "${itemActualizado?.WhsCode}/" +
-                                            "${itemActualizado?.ItemCode}"
+                                            "${itemActualizado.WhsCode}/" +
+                                            "${itemActualizado.ItemCode}"
                                 )
 
                             } else {
@@ -474,23 +543,23 @@ fun DetalleUbicacionPickingScreen(
                                     respuesta.message,
                                     Toast.LENGTH_LONG
                                 ).show()
-
                             }
 
                         } catch (e: Exception) {
 
-                            Log.e("*MAKITA*", "ERROR", e)
+                            Log.e(
+                                "*MAKITA*",
+                                "ERROR",
+                                e
+                            )
 
                             Toast.makeText(
                                 context,
                                 e.message ?: "Error",
                                 Toast.LENGTH_LONG
                             ).show()
-
                         }
-
                     }
-
                 },
 
                 modifier = Modifier
@@ -499,12 +568,16 @@ fun DetalleUbicacionPickingScreen(
                     .padding(bottom = 12.dp)
                     .navigationBarsPadding()
                     .height(50.dp),
-                    shape = RectangleShape,  ///probar con RoundedCornerShape(10.dp)
-                    colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF4FC3F7),
 
-                    contentColor = Color.White),
-                    enabled = !pickingCompleto,
+                shape = RectangleShape,
+
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF4FC3F7),
+                    contentColor = Color.White
+                ),
+
+                enabled = !pickingCompleto
+
             ) {
 
                 Icon(
@@ -512,20 +585,17 @@ fun DetalleUbicacionPickingScreen(
                     contentDescription = null,
                     modifier = Modifier.size(22.dp)
                 )
-                Spacer(modifier = Modifier.width(8.dp))
+
+                Spacer(
+                    modifier = Modifier.width(8.dp)
+                )
 
                 Text(
                     text = "INICIAR LECTURA",
                     fontWeight = FontWeight.Bold,
                     fontSize = 18.sp
                 )
-
             }
-
-
-
         }
-
     }
-
 }

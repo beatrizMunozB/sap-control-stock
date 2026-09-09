@@ -125,6 +125,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.ui.text.style.TextOverflow
 import android.widget.Toast
+import androidx.compose.foundation.border
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -138,6 +140,7 @@ import com.makita.controlstock.mostrarDialogo
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.draw.clip
 import com.makita.controlstock.data.network.SolicitudCabeceraResponse
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -145,8 +148,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 
 
 @Composable
-fun PickingSolicitudScreen(usuario: String ,  navController: NavController) {
-
+fun PickingSolicitudScreen(usuario: String, navController: NavController) {
 
     var errorState by rememberSaveable { mutableStateOf<String?>(null) }
     var errorMessage by remember { mutableStateOf("") }
@@ -168,7 +170,9 @@ fun PickingSolicitudScreen(usuario: String ,  navController: NavController) {
     var mostrarDialogoTransferencia by remember { mutableStateOf(false) }
     var mensajeTransferencia by remember { mutableStateOf("") }
     val focusRequester = remember { FocusRequester() }
-    var capturasPendientes   by rememberSaveable { mutableStateOf<List<CapturaPendiente>>(emptyList()) }
+    var capturasPendientes by rememberSaveable {
+        mutableStateOf<List<CapturaPendiente>>(emptyList())
+    }
     var mostrarListaCapturas by rememberSaveable { mutableStateOf(false) }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -176,59 +180,77 @@ fun PickingSolicitudScreen(usuario: String ,  navController: NavController) {
     var mensajeDialogo by remember { mutableStateOf("") }
     var ubicacionValidada by rememberSaveable { mutableStateOf(false) }
 
-    var solicitudes by remember         { mutableStateOf<List<PickingCabeceraResponse>>(emptyList())}
-    var response    by rememberSaveable { mutableStateOf<List<PickingCabeceraResponse>>(emptyList())}
+    var solicitudes by remember {
+        mutableStateOf<List<PickingCabeceraResponse>>(emptyList())
+    }
+
+    var response by rememberSaveable {
+        mutableStateOf<List<PickingCabeceraResponse>>(emptyList())
+    }
 
     var numeroPicking by remember { mutableStateOf("") }
     var lastnumeroPicking by remember { mutableStateOf("") }
     var NumeroActual by rememberSaveable { mutableStateOf("") }
     val coroutineScope = rememberCoroutineScope()
-
+    var actualizandoPicking by remember { mutableStateOf(false) }
+    val lazyListState = rememberLazyListState()
 
 
     fun buscarPicking() {
+
+        if (actualizandoPicking) return
+
+        actualizandoPicking = true
 
         CoroutineScope(Dispatchers.IO).launch {
 
             try {
 
-                val resultado = apiService.obtenerPickingSolicitud(usuario,"BOD01")
+                val resultado = apiService.obtenerPickingSolicitud(usuario, "BOD01")
 
-                Log.d("*MAKITA*", resultado.toString())
+                Log.d("*MAKITA*", "RESPUESTA PICKING = $resultado")
+                Log.d("*MAKITA*", "CANTIDAD PICKING = ${resultado.data.size}")
 
                 withContext(Dispatchers.Main) {
 
                     solicitudes = resultado.data
 
-                    if (solicitudes.isEmpty())
-                    {
-                        mensajeDialogo         = "No existen Picking Liberados"
-                        mostrarDialogoSinDatos = true
-                        mostrarListaCapturas   = false
-                    }
-                    else
-                    {
-                        mostrarListaCapturas = true
-                    }
+                    actualizandoPicking = false
 
-                    //mostrarListaCapturas = transferencias.isNotEmpty()
+                    if (solicitudes.isEmpty()) {
+
+                        mensajeDialogo = "No existen Picking Liberados"
+                        mostrarDialogoSinDatos = true
+                        mostrarListaCapturas = false
+
+                    } else {
+
+                        mostrarListaCapturas = true
+
+                        Toast.makeText(
+                            context,
+                            "Picking actualizados: ${solicitudes.size}",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
                 }
 
             } catch (e: Exception) {
 
-                Log.d("*MAKITA*", e.message.toString())
+                Log.d("*MAKITA*", "ERROR PICKING = ${e.message}")
+
                 withContext(Dispatchers.Main) {
+
+                    actualizandoPicking = false
 
                     Toast.makeText(
                         context,
-                        "Error al consultar Solicitudes de Traslados",
+                        "Error al consultar Picking",
                         Toast.LENGTH_LONG
                     ).show()
 
                     mostrarListaCapturas = false
-
                 }
-
             }
         }
     }
@@ -246,52 +268,56 @@ fun PickingSolicitudScreen(usuario: String ,  navController: NavController) {
         errorState = ""
 
         CoroutineScope(Dispatchers.IO).launch {
+
             try {
+
                 val apiResponse = apiService.validarPicking(NumeroLimpio)
-                
+
                 withContext(Dispatchers.Main) {
 
                     if (apiResponse.data.isNullOrEmpty()) {
+
                         errorState = "No se encontraron datos para el item proporcionado"
                         numeroPicking = ""
                         itemFocusRequester.requestFocus()
+
                         return@withContext
                     }
 
                     val tieneValoresNulos = apiResponse.data.any { it.AbsEntry == null }
 
-                    
                     if (tieneValoresNulos) {
+
                         Log.d("*MAKITA*", " ingresand modo $tieneValoresNulos ")
+
                         errorState = "No se encontraron datos"
                         numeroPicking = ""
                         mostrarDialogoProductoNoExiste = true
 
                         itemFocusRequester.requestFocus()
+
                     } else {
+
                         Log.d("*MAKITA*", " ingresand no tiene $tieneValoresNulos ")
 
                         errorState = ""
                         response = apiResponse.data
-                        
+
                         keyboardController?.hide()
                         cantidadFocusRequester.requestFocus()
                     }
                 }
+
             } catch (e: Exception) {
+
                 withContext(Dispatchers.Main) {
                     errorState = "Error de conexión"
                 }
             }
         }
-
     }
 
-/*
-    LaunchedEffect(Unit) {
-        buscarPicking()
-    }
-*/
+
     val lifecycleOwner = LocalLifecycleOwner.current
 
     DisposableEffect(lifecycleOwner) {
@@ -316,6 +342,7 @@ fun PickingSolicitudScreen(usuario: String ,  navController: NavController) {
     ) {
 
         val solicitudesFiltradas = solicitudes.filter {
+
             numeroPicking.isBlank() ||
                     it.AbsEntry.toString().contains(numeroPicking)
         }
@@ -323,10 +350,6 @@ fun PickingSolicitudScreen(usuario: String ,  navController: NavController) {
         Column(
             modifier = Modifier.fillMaxSize()
         ) {
-
-            //==========================
-            // ENCABEZADO
-            //==========================
 
             ElevatedCard(
                 modifier = Modifier.fillMaxWidth(),
@@ -347,8 +370,11 @@ fun PickingSolicitudScreen(usuario: String ,  navController: NavController) {
                 ) {
 
                     IconButton(
-                        onClick = { navController.popBackStack() }
+                        onClick = {
+                            navController.popBackStack()
+                        }
                     ) {
+
                         Icon(
                             imageVector = Icons.Default.ArrowBack,
                             contentDescription = null,
@@ -360,16 +386,40 @@ fun PickingSolicitudScreen(usuario: String ,  navController: NavController) {
                         text = "PICKING",
                         color = Color.White,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp
+                        fontSize = 20.sp,
+                        modifier = Modifier.weight(1f)
                     )
 
-                }
+                    IconButton(
+                        onClick = {
+                            buscarPicking()
+                        },
+                        enabled = !actualizandoPicking,
+                        modifier = Modifier.size(56.dp)
+                    ) {
 
+                        if (actualizandoPicking) {
+
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(32.dp),
+                                color = Color.White,
+                                strokeWidth = 3.dp
+                            )
+
+                        } else {
+
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = "Actualizar Picking",
+                                tint = Color.White,
+                                modifier = Modifier.size(36.dp)
+                            )
+                        }
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
-
-
 
             Column(
                 modifier = Modifier
@@ -379,6 +429,7 @@ fun PickingSolicitudScreen(usuario: String ,  navController: NavController) {
 
                 OutlinedTextField(
                     value = numeroPicking,
+
                     onValueChange = { newValue ->
 
                         val cleanedText = newValue
@@ -394,11 +445,14 @@ fun PickingSolicitudScreen(usuario: String ,  navController: NavController) {
                                 cleanedText
                     },
 
-                    label = { Text("N° Picking") },
+                    label = {
+                        Text("N° Picking")
+                    },
 
                     modifier = Modifier
                         .fillMaxWidth()
                         .onFocusChanged {
+
                             if (it.isFocused) {
                                 keyboardController?.hide()
                             }
@@ -411,6 +465,7 @@ fun PickingSolicitudScreen(usuario: String ,  navController: NavController) {
 
                     keyboardActions = KeyboardActions(
                         onDone = {
+
                             if (numeroPicking.isNotBlank()) {
                                 validarPicking(numeroPicking)
                             }
@@ -418,6 +473,7 @@ fun PickingSolicitudScreen(usuario: String ,  navController: NavController) {
                     ),
 
                     trailingIcon = {
+
                         Icon(
                             imageVector = Icons.Filled.PlayArrow,
                             contentDescription = "Buscar",
@@ -432,88 +488,157 @@ fun PickingSolicitudScreen(usuario: String ,  navController: NavController) {
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                LazyColumn(
+                Box(
                     modifier = Modifier.fillMaxSize()
                 ) {
 
-                    items(solicitudesFiltradas) { solicitud ->
+                    LazyColumn(
+                        state = lazyListState,
+                        modifier = Modifier.fillMaxSize()
+                    ) {
 
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 4.dp)
-                                .clickable {
-                                    navController.navigate(
-                                        "detallePicking/${solicitud.AbsEntry}"
-                                    )
-                                },
-                            elevation = CardDefaults.cardElevation(
-                                defaultElevation = 4.dp
-                            )
-                        ) {
+                        items(solicitudesFiltradas) { solicitud ->
 
-                            Column(
-                                modifier = Modifier.padding(12.dp)
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp)
+                                    .clickable {
+
+                                        navController.navigate(
+                                            "detallePicking/${solicitud.AbsEntry}"
+                                        )
+                                    }
+                                    .border(
+                                        width = 2.dp,
+                                        color = Color(0xFF1976D2),
+                                        shape = RoundedCornerShape(12.dp)
+                                    ),
+
+                                colors = CardDefaults.cardColors(
+                                    containerColor = Color.White
+                                ),
+
+                                elevation = CardDefaults.cardElevation(
+                                    defaultElevation = 4.dp
+                                ),
+
+                                shape = RoundedCornerShape(12.dp)
                             ) {
 
-                                val fechaFormateada = try {
-                                    LocalDate.parse(solicitud.PickDate.take(10))
-                                        .format(DateTimeFormatter.ofPattern("dd-MM-yyyy"))
-                                } catch (e: Exception) {
-                                    solicitud.PickDate
-                                }
-
-                                // FILA 1
-                                Row(
-                                    modifier = Modifier.fillMaxWidth()
+                                Column(
+                                    modifier = Modifier.padding(12.dp)
                                 ) {
 
-                                    // 1.1 Picking
-                                    Text(
-                                        text = "Picking N° ${solicitud.AbsEntry}",
-                                        modifier = Modifier.weight(1f),
-                                        fontWeight = FontWeight.Bold,
-                                        style = MaterialTheme.typography.titleMedium
-                                    )
+                                    val fechaFormateada = try {
 
-                                    // 1.2 Fecha
-                                    Text(
-                                        text = "$fechaFormateada",
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                }
+                                        LocalDate.parse(
+                                            solicitud.PickDate.take(10)
+                                        ).format(
+                                            DateTimeFormatter.ofPattern("dd-MM-yyyy")
+                                        )
 
-                                Spacer(modifier = Modifier.height(6.dp))
+                                    } catch (e: Exception) {
 
-                                // FILA 2
-                                Row(
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
+                                        solicitud.PickDate
+                                    }
 
-                                    // 2.1 Comentarios ocupa las 2 columnas
-                                    Text(
-                                        text = "Comentarios: ${solicitud.Remarks ?: ""}",
+                                    Row(
                                         modifier = Modifier.fillMaxWidth()
-                                    )
+                                    ) {
+
+                                        Text(
+                                            text = "Picking N° ${solicitud.AbsEntry}",
+                                            modifier = Modifier.weight(1f),
+                                            fontWeight = FontWeight.Bold,
+                                            style = MaterialTheme.typography.titleMedium
+                                        )
+
+                                        Text(
+                                            text = fechaFormateada,
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                    }
+
+                                    Spacer(modifier = Modifier.height(6.dp))
+
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+
+                                        Text(
+                                            text = "Comentarios: ${solicitud.Remarks ?: ""}",
+                                            modifier = Modifier.fillMaxWidth()
+                                        )
+                                    }
                                 }
                             }
-
                         }
-
                     }
 
+                    if (
+                        lazyListState.isScrollInProgress &&
+                        lazyListState.layoutInfo.totalItemsCount > 0
+                    ) {
+
+                        val totalItems =
+                            lazyListState.layoutInfo.totalItemsCount
+
+                        val visibleItems =
+                            lazyListState.layoutInfo.visibleItemsInfo.size
+
+                        if (totalItems > visibleItems) {
+
+                            val firstVisibleItem =
+                                lazyListState.firstVisibleItemIndex
+
+                            val maxFirstVisibleItem =
+                                (totalItems - visibleItems).coerceAtLeast(1)
+
+                            val scrollFraction =
+                                (
+                                        firstVisibleItem.toFloat() /
+                                                maxFirstVisibleItem.toFloat()
+                                        ).coerceIn(0f, 1f)
+
+                            BoxWithConstraints(
+                                modifier = Modifier
+                                    .align(Alignment.CenterEnd)
+                                    .fillMaxHeight()
+                                    .padding(
+                                        top = 4.dp,
+                                        bottom = 4.dp,
+                                        end = 2.dp
+                                    )
+                            ) {
+
+                                val thumbHeight = 70.dp
+
+                                val availableHeight =
+                                    (maxHeight - thumbHeight)
+                                        .coerceAtLeast(0.dp)
+
+                                Box(
+                                    modifier = Modifier
+                                        .align(Alignment.TopEnd)
+                                        .offset(
+                                            y = availableHeight * scrollFraction
+                                        )
+                                        .width(10.dp)
+                                        .height(thumbHeight)
+                                        .clip(RoundedCornerShape(5.dp))
+                                        .background(Color.White)
+                                        .border(
+                                            width = 2.dp,
+                                            color = Color.DarkGray,
+                                            shape = RoundedCornerShape(5.dp)
+                                        )
+                                )
+                            }
+                        }
+                    }
                 }
-
             }
-
         }
-
     }
-
-
-
-
-
-
-
 }

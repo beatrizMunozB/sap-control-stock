@@ -188,6 +188,7 @@ fun DetallePickingScreen(
                                     "detalleUbicacionPicking/" +
                                             "${AbsEntry}/" +
                                             "${BinAbs}"
+
                                 )
                             },
                         elevation = CardDefaults.cardElevation(

@@ -1,6 +1,12 @@
 package com.makita.controlstock.ui.screens
 
 
+import android.content.Context
+import android.graphics.Paint
+import android.os.Bundle
+import android.os.CancellationSignal
+import android.print.PrintAttributes
+import android.print.PrintDocumentAdapter
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.background
@@ -46,20 +52,30 @@ import com.makita.controlstock.data.network.EnviarDetalleASAPRequest
 import com.makita.controlstock.data.network.IniciarPickingLecturaRequest
 import com.makita.controlstock.data.network.PickingCapturaResponse
 import com.makita.controlstock.data.network.PickingDetalleUbicacionResponse
+import com.makita.controlstock.session.Sesion
 import kotlinx.coroutines.launch
+import android.print.PrintManager
 
+import android.os.ParcelFileDescriptor
+import android.print.PageRange
+
+import android.print.PrintDocumentInfo
+import android.print.pdf.PrintedPdfDocument
+import java.io.FileOutputStream
+import java.net.URL
+import java.net.HttpURLConnection
+
+
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
 
 
 
 @Composable
 fun ProcesadoPickingScreen(
     idCabecera: Int,
-    idDetalle: Int,
     absEntry: Int,
-    binCode: String,
-    binAbs: Int,
-    whsCode: String,
-    itemCode: String,
     navController: NavHostController
 ) {
 
@@ -71,17 +87,18 @@ fun ProcesadoPickingScreen(
     var mensajeError2 by remember { mutableStateOf("") }
     var showDialog7 by remember { mutableStateOf(false) }
 
+    var showDialog8    by remember { mutableStateOf(false) }
+    var mensajeError8 by remember { mutableStateOf("") }
 
 
-    LaunchedEffect(idDetalle, binAbs) {
+
+
+    LaunchedEffect(idCabecera) {
 
         try {
 
             val resultado =
-                apiService.obtenerPickingCapturas(
-                    idDetalle,
-                    binAbs
-                )
+                apiService.obtenerPickingProcesado(idCabecera)
 
             if (resultado.success) {
                 capturas = resultado.data
@@ -89,10 +106,9 @@ fun ProcesadoPickingScreen(
 
         } catch (e: Exception) {
 
-            //  ACA MENSAJE MAS CLARO PARA EL USUARIO
             Log.e(
                 "*MAKITA*PICKING*",
-                "ERROR OBTENIENDO CAPTURAS",
+                "ERROR OBTENIENDO CAPTURAS DEL PICKING",
                 e
             )
         }
@@ -100,8 +116,10 @@ fun ProcesadoPickingScreen(
 
 
     val puedeEnviarASAP =
-        capturas.size == 1 &&
-                capturas.first().cantidad > 0
+        capturas.isNotEmpty() &&
+                capturas.all {
+                    it.cantidad > 0
+                }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -131,9 +149,6 @@ fun ProcesadoPickingScreen(
                     modifier = Modifier.padding(16.dp)
                 ) {
 
-                    // =========================================
-                    // TITULO
-                    // =========================================
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -162,7 +177,7 @@ fun ProcesadoPickingScreen(
                     }
 
                     Spacer(
-                        modifier = Modifier.height(10.dp)
+                        modifier = Modifier.height(5.dp)
                     )
 
                     // =========================================
@@ -180,6 +195,7 @@ fun ProcesadoPickingScreen(
                             Text(
                                 text = "N° PICKING",
                                 color = Color.White,
+                                fontWeight = FontWeight.Bold,
                                 fontSize = 16.sp
                             )
 
@@ -197,64 +213,14 @@ fun ProcesadoPickingScreen(
                         ) {
 
                             Text(
-                                text = "MAKITA CHILE",
+                                text = "Bodega",
                                 color = Color.White,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 16.sp
                             )
 
                             Text(
-                                text = "COM. LTDA.",
-                                color = Color.White,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 16.sp
-                            )
-                        }
-                    }
-
-                    Spacer(
-                        modifier = Modifier.height(10.dp)
-                    )
-
-                    // =========================================
-                    // UBICACION / BODEGA
-                    // =========================================
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-
-                        Column(
-                            modifier = Modifier.weight(1f)
-                        ) {
-
-                            Text(
-                                text = "UBICACION",
-                                color = Color.White,
-                                fontSize = 12.sp
-                            )
-
-                            Text(
-                                text = binCode,
-                                color = Color.White,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 16.sp
-                            )
-                        }
-
-                        Column(
-                            modifier = Modifier.weight(1f),
-                            horizontalAlignment = Alignment.End
-                        ) {
-
-                            Text(
-                                text = "BODEGA",
-                                color = Color.White,
-                                fontSize = 12.sp
-                            )
-
-                            Text(
-                                text = whsCode,
+                                text = capturas.firstOrNull()?.whsCode ?: "",
                                 color = Color.White,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 16.sp
@@ -265,6 +231,7 @@ fun ProcesadoPickingScreen(
                     Spacer(
                         modifier = Modifier.height(10.dp)
                     )
+
 
                     // =========================================
                     // DETALLE ARTICULO
@@ -288,13 +255,13 @@ fun ProcesadoPickingScreen(
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 16.sp
                             )
-
+                            /*
                             Text(
                                 text = "Item: ${itemCode.trim()}",
                                 color = Color.Red,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 16.sp
-                            )
+                            )*/
                         }
                     }
                 }
@@ -383,7 +350,7 @@ fun ProcesadoPickingScreen(
                                 )
 
                                 Text(
-                                    text = "Ubicacion: $binCode",
+                                    text = "Ubicacion: ${captura.barCode ?: "-"}",
                                     fontSize = 14.sp
                                 )
 
@@ -406,7 +373,7 @@ fun ProcesadoPickingScreen(
                             ) {
 
                                 Text(
-                                    text = "${captura.ItemName ?: ""}",
+                                    text = "${captura.ItemName?.take(25) ?: ""}",
                                     fontSize = 15.sp,
                                     fontWeight = FontWeight.Bold
                                 )
@@ -536,6 +503,8 @@ fun ProcesadoPickingScreen(
             }
 
 
+
+
             Spacer(
                 modifier = Modifier.height(8.dp)
             )
@@ -547,21 +516,18 @@ fun ProcesadoPickingScreen(
 
                         try {
 
-                            // =====================================================
-                            // 1. VERIFICAR SI TODO EL PICKING ESTÁ COMPLETO
-                            // =====================================================
-
                             Log.d(
-                                "*MAKITA*SAP*",
+                                "*MAKITA**",
                                 "VERIFICANDO PICKING COMPLETO: idCabecera=$idCabecera"
                             )
+
 
                             val estadoPicking =
                                 apiService.verificarPickingCompleto(idCabecera)
 
                             Log.d(
                                 "*MAKITA*SAP*",
-                                "ESTADO PICKING = $estadoPicking"
+                                "ESTADO PICKING XXX= $estadoPicking"
                             )
 
                             if (!estadoPicking.success) {
@@ -619,48 +585,46 @@ fun ProcesadoPickingScreen(
                                 "*MAKITA*SAP*",
                                 "PICKING COMPLETO → ENVIANDO DETALLE A SAP: " +
                                         "idCabecera=$idCabecera, " +
-                                        "idDetalle=$idDetalle, " +
-                                        "absEntry=$absEntry, " +
-                                        "binAbs=$binAbs"
+                                        "absEntry=$absEntry, "
+
                             )
 
-                            val request =
-                                EnviarDetalleASAPRequest(
-                                    idCabecera = idCabecera,
-                                    idDetalle = idDetalle,
-                                    absEntry = absEntry,
-                                    binAbs = binAbs
-                                )
+                            val request = EnviarDetalleASAPRequest(
+                                         idCabecera = idCabecera,
+                                         absEntry = absEntry
+                                         )
 
-                            val respuesta =
-                                apiService.enviarDetalleASAP(request)
+                           val respuesta =
+                               apiService.enviarDetalleASAP(request)
+
+
+                           Log.d(
+                               "*MAKITA*SAP*",
+                               "RESPUESTA ENVIAR DETALLE = $respuesta"
+                           )
+
+                           if (!respuesta.success) {
+
+                               Toast.makeText(
+                                   context,
+                                   respuesta.message ?: "Error enviando detalle a SAP",
+                                   Toast.LENGTH_LONG
+                               ).show()
+
+                               return@launch
+                           }
 
                             Log.d(
                                 "*MAKITA*SAP*",
-                                "RESPUESTA ENVIAR DETALLE = $respuesta"
+                                "DETALLES ENVIADOS A SAP = ${respuesta.detallesEnviados}"
                             )
 
-                            if (!respuesta.success) {
+                           Toast.makeText(
+                               context,
+                               respuesta.message ?: "Capturas enviadas a SAP",
+                               Toast.LENGTH_LONG
+                           ).show()
 
-                                Toast.makeText(
-                                    context,
-                                    respuesta.message ?: "Error enviando detalle a SAP",
-                                    Toast.LENGTH_LONG
-                                ).show()
-
-                                return@launch
-                            }
-
-                            Log.d(
-                                "*MAKITA*SAP*",
-                                "CAPTURAS RECIBIDAS = ${respuesta.capturas}"
-                            )
-
-                            Toast.makeText(
-                                context,
-                                respuesta.message ?: "Capturas enviadas a SAP",
-                                Toast.LENGTH_LONG
-                            ).show()
 
 
                             // =====================================================
@@ -684,29 +648,34 @@ fun ProcesadoPickingScreen(
                             if (respuestaCierre.success) {
 
                                 Log.d(
-                                    "*MAKITA*SAP*",
-                                    "PICKING CERRADO CORRECTAMENTE EN SAP"
+                                    "*MAKITA*IMPRESION*",
+                                    "PICKING CERRADO CORRECTAMENTE → GENERANDO IMPRESIÓN"
                                 )
 
-                                Toast.makeText(
-                                    context,
-                                    "PICKING CERRADO CORRECTAMENTE EN SAP",
-                                    Toast.LENGTH_LONG
-                                ).show()
+                                showDialog8 = true
+                                mensajeError8 = "PICKING PROCESADO DE FORMA CORRECTA EN SAP"
 
-                            } else {
-
-                                Log.e(
-                                    "*MAKITA*SAP*",
-                                    "ERROR CERRANDO PICKING: ${respuestaCierre.message}"
+                                imprimirPicking(
+                                    context = context,
+                                    idDocumento = respuestaCierre.idDocumento!!
                                 )
 
+                            }
+                            else
+                            {
+
+
+                                showDialog8 = true
+                                mensajeError8 = "ERROR ${respuestaCierre.message}"
+                                /*
                                 Toast.makeText(
                                     context,
                                     respuestaCierre.message
                                         ?: "Error cerrando picking en SAP",
                                     Toast.LENGTH_LONG
                                 ).show()
+
+                                 */
                             }
 
                         } catch (e: Exception) {
@@ -717,11 +686,9 @@ fun ProcesadoPickingScreen(
                                 e
                             )
 
-                            Toast.makeText(
-                                context,
-                                e.message ?: "Error enviando detalle",
-                                Toast.LENGTH_LONG
-                            ).show()
+                            showDialog8 = true
+                            mensajeError8 = e.message ?: "Error enviando detalle"
+
                         }
                     }
                 },
@@ -758,10 +725,185 @@ fun ProcesadoPickingScreen(
 
         }
 
+        if (showDialog8) {
+            mostrarDialogo8(
+                titulo = "Alerta!",
+                mensaje = mensajeError8,
+                onDismiss = {
+                    showDialog8 = false
+                }
+            )
+        }
+
 
     }
 
 
+}
+
+private fun imprimirPicking(
+    context: Context,
+    idDocumento: Int
+) {
+
+    val impresora =
+        Sesion.impresora
+
+    if (impresora.isNullOrBlank()) {
+
+        Toast.makeText(
+            context,
+            "No hay impresora seleccionada",
+            Toast.LENGTH_SHORT
+        ).show()
+
+        return
+    }
+
+    CoroutineScope(Dispatchers.IO).launch {
+
+        try {
+
+            val respuesta =
+                apiService.obtenerPDFPicking(
+                    idDocumento
+                )
+
+            val archivoPDF =
+                File(
+                    context.cacheDir,
+                    "Picking_$idDocumento.pdf"
+                )
+
+            val input =
+                respuesta.byteStream()
+
+            val output =
+                FileOutputStream(
+                    archivoPDF
+                )
+
+            input.copyTo(output)
+
+            output.close()
+            input.close()
+
+            withContext(Dispatchers.Main) {
+
+                val printManager =
+                    context.getSystemService(
+                        Context.PRINT_SERVICE
+                    ) as PrintManager
+
+                val printAdapter =
+                    object : PrintDocumentAdapter() {
+
+                        override fun onLayout(
+                            oldAttributes: PrintAttributes?,
+                            newAttributes: PrintAttributes,
+                            cancellationSignal: CancellationSignal,
+                            callback: LayoutResultCallback,
+                            extras: Bundle?
+                        ) {
+
+                            if (
+                                cancellationSignal.isCanceled
+                            ) {
+
+                                callback.onLayoutCancelled()
+
+                                return
+                            }
+
+                            val info =
+                                PrintDocumentInfo.Builder(
+                                    "Picking_$idDocumento.pdf"
+                                )
+                                    .setContentType(
+                                        PrintDocumentInfo.CONTENT_TYPE_DOCUMENT
+                                    )
+                                    .setPageCount(
+                                        PrintDocumentInfo.PAGE_COUNT_UNKNOWN
+                                    )
+                                    .build()
+
+                            callback.onLayoutFinished(
+                                info,
+                                true
+                            )
+                        }
+
+                        override fun onWrite(
+                            pages: Array<out PageRange>,
+                            destination: ParcelFileDescriptor,
+                            cancellationSignal: CancellationSignal,
+                            callback: WriteResultCallback
+                        ) {
+
+                            try {
+
+                                if (
+                                    cancellationSignal.isCanceled
+                                ) {
+
+                                    callback.onWriteCancelled()
+
+                                    return
+                                }
+
+                                FileOutputStream(
+                                    destination.fileDescriptor
+                                ).use { output ->
+
+                                    archivoPDF.inputStream().use { input ->
+
+                                        input.copyTo(
+                                            output
+                                        )
+                                    }
+                                }
+
+                                callback.onWriteFinished(
+                                    arrayOf(
+                                        PageRange.ALL_PAGES
+                                    )
+                                )
+
+                            } catch (e: Exception) {
+
+                                callback.onWriteFailed(
+                                    e.message
+                                )
+                            }
+                        }
+                    }
+
+                printManager.print(
+                    "Picking $idDocumento",
+                    printAdapter,
+                    PrintAttributes.Builder()
+                        .setMediaSize(
+                            PrintAttributes.MediaSize.NA_LETTER
+                        )
+                        .setMinMargins(
+                            PrintAttributes.Margins.NO_MARGINS
+                        )
+                        .build()
+                )
+            }
+
+        } catch (e: Exception) {
+
+            withContext(Dispatchers.Main) {
+
+                Toast.makeText(
+                    context,
+                    "Error obteniendo PDF: ${e.message}",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+    }
 }
 
 @Composable
@@ -781,8 +923,27 @@ fun mostrarDialogo4(
         }
     )
 }
+
 @Composable
 fun mostrarDialogo7(
+    titulo: String,
+    mensaje: String,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(text = titulo) },
+        text = { Text(text = mensaje) },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Aceptar")
+            }
+        }
+    )
+}
+
+@Composable
+fun mostrarDialogo8(
     titulo: String,
     mensaje: String,
     onDismiss: () -> Unit,

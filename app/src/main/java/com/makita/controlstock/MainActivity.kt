@@ -420,6 +420,7 @@ fun AppNavigation() {
             val absEntry = backStackEntry.arguments?.getInt("AbsEntry") ?: 0
             val binAbs = backStackEntry.arguments?.getInt("BinAbs") ?: 0
 
+
             DetalleUbicacionPickingScreen(
                 AbsEntry = absEntry,
                 BinAbs = binAbs,
@@ -464,34 +465,21 @@ fun AppNavigation() {
 
 
         composable(
-            route = "procesadoPicking/{idCabecera}/{idDetalle}/{absEntry}/{binCode}/{binAbs}/{whsCode}/{ItemCode}",
+            route = "procesadoPicking/{idCabecera}/{absEntry}",
             arguments = listOf(
                 navArgument("idCabecera") { type = NavType.IntType },
-                navArgument("idDetalle") { type = NavType.IntType },
-                navArgument("absEntry") { type = NavType.IntType },
-                navArgument("binCode") { type = NavType.StringType },
-                navArgument("binAbs") { type = NavType.IntType },
-                navArgument("whsCode") { type = NavType.StringType },
-                navArgument("ItemCode") { type = NavType.StringType },
+                navArgument("absEntry") { type = NavType.IntType }
+
             )
         ) { backStackEntry ->
 
             val idCabecera = backStackEntry.arguments?.getInt("idCabecera") ?: 0
-            val idDetalle = backStackEntry.arguments?.getInt("idDetalle") ?: 0
+
             val absEntry = backStackEntry.arguments?.getInt("absEntry") ?: 0
-            val binCode = backStackEntry.arguments?.getString("binCode") ?: ""
-            val binAbs = backStackEntry.arguments?.getInt("binAbs") ?: 0
-            val whsCode = backStackEntry.arguments?.getString("whsCode") ?: ""
-            val itemCode = backStackEntry.arguments?.getString("ItemCode") ?: ""
 
             ProcesadoPickingScreen(
                 idCabecera = idCabecera,
-                idDetalle = idDetalle,
                 absEntry = absEntry,
-                binCode = binCode,
-                binAbs = binAbs,
-                whsCode = whsCode,
-                itemCode = itemCode,
                 navController = navController
             )
         }

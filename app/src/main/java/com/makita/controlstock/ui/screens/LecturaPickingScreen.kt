@@ -64,6 +64,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import com.makita.controlstock.data.network.IniciarPickingLecturaRequest
+import com.makita.controlstock.data.network.ItemNombreResponse
 import com.makita.controlstock.data.network.ItemResponse
 import com.makita.controlstock.data.network.RegistrarPickingCapturaRequest
 import com.makita.controlstock.session.Sesion
@@ -116,7 +117,8 @@ fun LecturaPickingScreen(
     var mensajeError2 by remember { mutableStateOf("") }
     var textFieldValue2 by remember { mutableStateOf("") }
     var response35: String
-    var response     by rememberSaveable { mutableStateOf<List<ItemResponse>>(emptyList()) }
+    var response     by rememberSaveable { mutableStateOf<List<ItemNombreResponse>>(emptyList()) }
+
     val request = IniciarPickingLecturaRequest(
         usuario = Sesion.usuario
     )
@@ -211,16 +213,22 @@ fun LecturaPickingScreen(
                                         }
 
                                         if (cantidadIngresada != cantidadEtiqueta) {
+
+                                            CantidadEscaneada = "0"
+
                                             val textoUnidad =
                                                 if (cantidadEtiqueta == 1) "unidad" else "unidades"
                                             mensajeError2 =
                                                 "ETIQUETA MASTER\n\n" +
                                                         "La cantidad de la etiqueta corresponde a " +
                                                         "$cantidadEtiqueta $textoUnidad.\n\n" +
-                                                        "Cantidad ingresada: $cantidadIngresada"
+                                                        "Cantidad ingresada: $cantidadIngresada \n\n" +
+                                                        "SOBREPASA LAS UNIDADES SOLICITADAS"
 
                                             showDialogCantidad = true
+
                                             return@launch
+
                                         }
 
 
@@ -315,7 +323,7 @@ fun LecturaPickingScreen(
 
                                         } else {
 
-                                            CantidadEscaneada = ""
+
 
                                             Log.d(
                                                 "*MAKITA*PICKING*",
@@ -351,6 +359,7 @@ fun LecturaPickingScreen(
                                                             "detalleUbicacionPicking/" +
                                                                     "$absEntry/" +
                                                                     "${siguiente.BinAbs}"
+
                                                         ) {
                                                             popUpTo("detalleUbicacionPicking/$absEntry/$binAbs") {
                                                                 inclusive = true
@@ -781,7 +790,7 @@ fun LecturaPickingScreen(
                         },
                         label = {
                             Text(
-                                "Ubicación",
+                                "Ubicacion",
                                 style = MaterialTheme.typography.bodySmall
                             )
                         },
@@ -983,7 +992,7 @@ fun LecturaPickingScreen(
                                             textFieldValue2 = ""
 
                                             val apiResponse =
-                                                apiService.obtenerUbicacionItem(
+                                                apiService.obtenerNombreItem(
                                                     extractedText.trim()
                                                 )
 
@@ -992,7 +1001,7 @@ fun LecturaPickingScreen(
                                             // 9. RESPUESTA VACÍA
                                             // =================================================
 
-                                            if (apiResponse.isNullOrEmpty()) {
+                                            if (!apiResponse.success || apiResponse.data.isEmpty()){
 
                                                 mensajeError =
                                                     "No se encontraron datos para el item ${extractedText.trim()}"
@@ -1018,8 +1027,8 @@ fun LecturaPickingScreen(
 
 
                                             val tieneValoresNulos =
-                                                apiResponse.any {
-                                                    it.item == null
+                                                apiResponse.data.any {
+                                                    it.item.isBlank()
                                                 }
 
                                             if (tieneValoresNulos) {
@@ -1048,7 +1057,7 @@ fun LecturaPickingScreen(
                                             }
 
 
-                                            response = apiResponse
+                                            response = apiResponse.data
 
                                             if (response.isNotEmpty()) {
 
@@ -1113,16 +1122,15 @@ fun LecturaPickingScreen(
                                         return@launch
                                     }
 
-
                                     textFieldValue2 = ""
 
                                     val apiResponse =
-                                        apiService.obtenerUbicacionItem(
+                                        apiService.obtenerNombreItem(
                                             extractedText.trim()
                                         )
 
 
-                                    if (apiResponse.isNullOrEmpty()) {
+                                    if (!apiResponse.success || apiResponse.data.isEmpty())  {
 
                                         mensajeError =
                                             "No se encontraron datos para el item ${extractedText.trim()}"
@@ -1148,7 +1156,7 @@ fun LecturaPickingScreen(
 
 
                                     val tieneValoresNulos =
-                                        apiResponse.any {
+                                        apiResponse.data.any {
                                             it.item == null
                                         }
 
@@ -1177,7 +1185,7 @@ fun LecturaPickingScreen(
                                         return@launch
                                     }
 
-                                    response = apiResponse
+                                    response = apiResponse.data
 
                                     if (response.isNotEmpty()) {
                                         textFieldValue2 = response.first().descripcion.trim()
@@ -1282,13 +1290,13 @@ fun LecturaPickingScreen(
                                 try {
 
                                     val stock =
-                                        apiService.obtenerUbicacionItem(
+                                        apiService.obtenerNombreItem(
                                             extractedText.trim()
                                         )
 
 
 
-                                    if (stock.isEmpty()) {
+                                    if (stock.data.isEmpty()) {
 
                                         mensajeError2 =
                                             "No se encontraron datos para el item ${extractedText.trim()}"
@@ -1307,10 +1315,10 @@ fun LecturaPickingScreen(
                                         return@launch
                                     }
 
-                                    response = stock
+                                    response = stock.data
 
                                     textFieldValue2 =
-                                        stock.first().descripcion.trim()
+                                        stock.data.first().descripcion.trim()
 
                                     Log.d(
                                         "*MAKITA*PICKING*",

@@ -9,6 +9,7 @@ import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.Path
+import okhttp3.ResponseBody
 
 
 
@@ -27,6 +28,7 @@ data class CerrarPickingResponse(
     val message: String,
     val idCabecera: Int? = null,
     val absEntrySAP: Int? = null,
+    val idDocumento: Int? = null,
     val estado: String? = null
 )
 
@@ -78,6 +80,22 @@ data class ItemResponse(
     var descripcion: String,
     var item: String,
     var tipoItem: String
+)
+
+
+
+data class ItemNombreResponse(
+    val ubicacion: String,
+    val descripcion: String,
+    val item: String,
+    val tipoItem: Int,
+    val nombreItem: String
+)
+
+data class ObtenerNombreItemResponse(
+    val success: Boolean,
+    val data: List<ItemNombreResponse>,
+    val message: String
 )
 
 data class CantidadResponse(
@@ -336,7 +354,8 @@ data class PickingDetalleUbicacionResponse(
     val CantidadPickeadaBin :  Double?,
     val OrderEntry : String?,
     val OrderLine : String?,
-    val BaseObject : String?
+    val BaseObject : String?,
+    val CantidadCapturada: Double?
 )
 
 data class RegistrarPickingCapturaRequest(
@@ -673,11 +692,9 @@ data class EliminarPickingCapturaResponse(
 
 data class EnviarDetalleASAPRequest(
     val idCabecera: Int,
-    val idDetalle: Int,
-    val absEntry: Int,
-    val binAbs: Int
+    val absEntry: Int
 )
-
+/*
 data class EnviarDetalleASAPResponse(
     val success: Boolean,
     val message: String?,
@@ -686,6 +703,15 @@ data class EnviarDetalleASAPResponse(
     val absEntry: Int?,
     val binAbs: Int?,
     val capturas: List<PickingCapturaResponse>?
+)*/
+
+data class EnviarDetalleASAPResponse(
+    val success: Boolean,
+    val message: String?,
+    val idCabecera: Int?,
+    val absEntry: Int?,
+    val detallesEnviados: Int?,
+    val sapStatus: String?
 )
 
 data class VerificarPickingCompletoResponse(
@@ -704,6 +730,13 @@ data class EstadoPickingResponse(
     val estado: String? = null,
     val pickingCompleto: Boolean = false,
     val message: String? = null
+)
+
+
+data class ObtenerPickingProcesadoResponse(
+    val success: Boolean,
+    val data: List<PickingCapturaResponse>,
+    val message: String
 )
 
 interface ApiService
@@ -745,6 +778,12 @@ interface ApiService
 
     @GET("api/obtener-ubicacion/{item}")
     suspend fun obtenerUbicacionItem(@Path("item") item: String) : List<ItemResponse>
+
+
+    @GET("api/obtener-nombre-item/{item}")
+    suspend fun obtenerNombreItem(
+        @Path("item") item: String
+    ): ObtenerNombreItemResponse
 
 
     @GET("api/obtener-stock-ubicacion/{ubicacion}")
@@ -968,6 +1007,9 @@ interface ApiService
         @Path("item") idCabecera: Int
     ): CerrarPickingResponse
 
+
+
+
     @GET("api/obtener-picking-capturas/{idDetalle}/{binAbs}")
     suspend fun obtenerPickingCapturas(
         @Path("idDetalle") idDetalle: Int,
@@ -995,6 +1037,15 @@ interface ApiService
     ): EstadoPickingResponse
 
 
+    @GET("api/obtener-picking-procesado/{absEntry}")
+    suspend fun obtenerPickingProcesado(
+        @Path("absEntry") absEntry: Int
+    ): ObtenerPickingProcesadoResponse
+
+    @GET("api/picking-documento/{idDocumento}/pdf")
+    suspend fun obtenerPDFPicking(
+        @Path("idDocumento") idDocumento: Int
+    ): ResponseBody
 
 
 
