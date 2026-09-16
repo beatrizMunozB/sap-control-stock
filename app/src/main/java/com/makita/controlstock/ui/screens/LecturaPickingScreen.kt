@@ -72,7 +72,12 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-
+import android.media.MediaPlayer
+import android.provider.Settings
+import android.media.AudioManager
+import android.media.ToneGenerator
+import android.os.Handler
+import android.os.Looper
 
 
 @Composable
@@ -131,6 +136,9 @@ fun LecturaPickingScreen(
         color = Color.Red,
         fontWeight = FontWeight.Bold
     )
+    var lecturaItemJob by remember {
+        mutableStateOf<kotlinx.coroutines.Job?>(null)
+    }
 
 
     fun procesarCantidad() {
@@ -168,87 +176,215 @@ fun LecturaPickingScreen(
                                     // =================================================
                                     "HERRAMIENTAS" -> {
 
-                                        val serieDesde =
-                                            extractedText2.trim().toIntOrNull()
+                                        val serieDesdeTexto = extractedText2.trim()
+                                        val serieHastaTexto = extractedText3.trim()
 
-                                        val serieHasta =
-                                            extractedText3.trim().toIntOrNull()
+                                        if (serieDesdeTexto.isBlank() || serieHastaTexto.isBlank()) {
+                                            mensajeError2 = "Rango de series inválido"
+                                            showDialogCantidad = true
+                                            return@launch
+                                        }
+
+                                        val serieDesde = serieDesdeTexto.toLongOrNull()
+                                        val serieHasta = serieHastaTexto.toLongOrNull()
 
                                         if (serieDesde == null || serieHasta == null) {
-
                                             mensajeError2 = "Rango de series inválido"
-
                                             showDialogCantidad = true
-
                                             return@launch
                                         }
 
                                         if (serieDesde > serieHasta) {
+                                            mensajeError2 =
+                                                "La serie desde ($serieDesdeTexto) no puede ser mayor que la serie hasta ($serieHastaTexto)"
+                                            showDialogCantidad = true
+                                            return@launch
+                                        }
+
+                                        // =================================================
+                                        // CANTIDAD REAL DE LA ETIQUETA
+                                        //
+                                        // 000003752 -> 000003752 = 1
+                                        // 000003752 -> 000003754 = 3
+                                        // =================================================
+
+                                        val cantidadEtiqueta = (serieHasta - serieDesde) + 1L
+
+                                        // La cantidad viene de la etiqueta.
+                                        CantidadEscaneada = cantidadEtiqueta.toString()
+                                        cantidad = cantidadEtiqueta.toString()
+
+                                        Log.d(
+                                            "*MAKITA*PICKING*",
+                                            "HERRAMIENTA | " +
+                                                    "SerieDesde=$serieDesdeTexto | " +
+                                                    "SerieHasta=$serieHastaTexto | " +
+                                                    "CantidadEtiqueta=$cantidadEtiqueta"
+                                        )
+
+                                        // =================================================
+                                        // OBTENER CANTIDAD DEL DETALLE ACTUAL
+                                        // =================================================
+
+                                        val datosPicking =
+                                            apiService.obtenerUbicacionPickingDetalle(
+                                                absEntry,
+                                                binAbs
+                                            )
+
+                                        val detalle =
+                                            datosPicking.data.firstOrNull {
+                                                it.IdDetalle == idDetalle
+                                            }
+
+                                        if (detalle == null) {
+                                            mensajeError2 = "No se encontró el detalle del picking."
+                                            showDialogCantidad = true
+                                            return@launch
+                                        }
+
+                                        val cantidadLiberada =
+                                            detalle.CantidadLiberada
+                                                .trim()
+                                                .replace(",", ".")
+                                                .toDoubleOrNull()
+
+                                        if (cantidadLiberada == null) {
+                                            mensajeError2 =
+                                                "No se pudo obtener la cantidad solicitada del artículo."
+                                            showDialogCantidad = true
+                                            return@launch
+                                        }
+
+                                        val cantidadCapturada =
+                                            detalle.CantidadCapturada ?: 0.0
+
+                                        val cantidadPendiente =
+                                            cantidadLiberada - cantidadCapturada
+
+                                        Log.d(
+                                            "*MAKITA*PICKING*",
+                                            "HERRAMIENTA | " +
+                                                    "CantidadLiberada=$cantidadLiberada | " +
+                                                    "CantidadCapturada=$cantidadCapturada | " +
+                                                    "CantidadPendiente=$cantidadPendiente | " +
+                                                    "CantidadEtiqueta=$cantidadEtiqueta"
+                                        )
+
+                                        // =================================================
+                                        // YA CUMPLIÓ LA CANTIDAD SOLICITADA
+                                        // =================================================
+
+                                        if (cantidadPendiente <= 0) {
 
                                             mensajeError2 =
-                                                "La serie desde ($serieDesde) " +
-                                                        "no puede ser mayor que la serie hasta ($serieHasta)"
+                                                "El artículo identificado ya cumplió con su cantidad solicitada."
 
                                             showDialogCantidad = true
+
+                                            CantidadEscaneada = ""
+
+                                            delay(100)
+
+                                            text = ""
+                                            extractedText = ""
+                                            extractedText2 = ""
+                                            extractedText3 = ""
+                                            extractedText4 = ""
+                                            textFieldValue2 = ""
+                                            cantidad = ""
+
+                                            itemFocusRequester.requestFocus()
 
                                             return@launch
                                         }
 
-
                                         // =================================================
-                                        // VALIDAR CANTIDAD DE LA ETIQUETA MASTER
+                                        // LA ETIQUETA NO PUEDE SUPERAR LO PENDIENTE
+                                        //
+                                        // SE VALIDA ANTES DE GUARDAR CUALQUIER SERIE.
                                         // =================================================
 
-                                        val cantidadEtiqueta =
-                                            (serieHasta - serieDesde) + 1
+                                        if (cantidadEtiqueta.toDouble() > cantidadPendiente) {
 
-                                        val cantidadIngresada =
-                                            CantidadEscaneada.toIntOrNull()
+                                            val pendienteTexto =
+                                                if (cantidadPendiente % 1.0 == 0.0) {
+                                                    cantidadPendiente.toInt().toString()
+                                                } else {
+                                                    cantidadPendiente.toString()
+                                                }
 
-                                        if (cantidadIngresada == null) {
-
-                                            mensajeError2 = "Ingrese una cantidad válida"
-                                            showDialogCantidad = true
-                                            return@launch
-                                        }
-
-                                        if (cantidadIngresada != cantidadEtiqueta) {
-
-                                            CantidadEscaneada = "0"
-
-                                            val textoUnidad =
-                                                if (cantidadEtiqueta == 1) "unidad" else "unidades"
                                             mensajeError2 =
                                                 "ETIQUETA MASTER\n\n" +
-                                                        "La cantidad de la etiqueta corresponde a " +
-                                                        "$cantidadEtiqueta $textoUnidad.\n\n" +
-                                                        "Cantidad ingresada: $cantidadIngresada \n\n" +
-                                                        "SOBREPASA LAS UNIDADES SOLICITADAS"
+                                                        "ETIQUETA DE CAJA contiene $cantidadEtiqueta unidades.\n\n" +
+                                                        "UNIDADES SOLICITADAS: $pendienteTexto\n\n" +
+                                                        "ETIQUETA INCORRECTA, INGRESE ETIQUETA INDIVIDUAL,  supera las unidades solicitadas."
 
                                             showDialogCantidad = true
 
-                                            return@launch
+                                            CantidadEscaneada = ""
 
+                                            delay(100)
+
+                                            text = ""
+                                            extractedText = ""
+                                            extractedText2 = ""
+                                            extractedText3 = ""
+                                            extractedText4 = ""
+                                            textFieldValue2 = ""
+                                            cantidad = ""
+
+                                            itemFocusRequester.requestFocus()
+
+                                            return@launch
                                         }
 
+                                        // =================================================
+                                        // CONSERVAR CEROS A LA IZQUIERDA
+                                        //
+                                        // Ejemplo:
+                                        // 000003752 -> 000003754
+                                        //
+                                        // Guarda:
+                                        // 000003752
+                                        // 000003753
+                                        // 000003754
+                                        // =================================================
+
+                                        val anchoSerie =
+                                            maxOf(
+                                                serieDesdeTexto.length,
+                                                serieHastaTexto.length
+                                            )
 
                                         // =================================================
-                                        // REGISTRAR CADA SERIE INDIVIDUALMENTE
+                                        // GUARDAR CADA SERIE
                                         // =================================================
-
 
                                         for (serie in serieDesde..serieHasta) {
+
+                                            val numeroSerie =
+                                                serie.toString().padStart(
+                                                    anchoSerie,
+                                                    '0'
+                                                )
 
                                             val request =
                                                 RegistrarPickingCapturaRequest(
                                                     idDetalle = idDetalle,
-                                                    numeroSerie = serie.toString(),
+                                                    numeroSerie = numeroSerie,
                                                     cantidad = 1,
                                                     whsCode = whsCode,
                                                     binAbs = binAbs,
-                                                    barCode =  codigoEsperado.uppercase(),
+                                                    barCode = codigoEsperado.uppercase(),
                                                     usuario = Sesion.usuario
                                                 )
+
+                                            Log.d(
+                                                "*MAKITA*PICKING*",
+                                                "REGISTRANDO HERRAMIENTA | " +
+                                                        "Serie=$numeroSerie | cantidad=1"
+                                            )
 
                                             val respuesta =
                                                 apiService.registrarPickingCaptura(
@@ -257,34 +393,111 @@ fun LecturaPickingScreen(
 
                                             Log.d(
                                                 "*MAKITA*PICKING*",
-                                                "Serie $serie → " +
+                                                "Serie $numeroSerie → " +
                                                         "success=${respuesta.success}, " +
                                                         "message=${respuesta.message}, " +
-                                                        "idDetalle=${respuesta.idDetalle}, " +
-                                                        "idCabecera=${respuesta.idCabecera}, " +
                                                         "detalleCompleto=${respuesta.detalleCompleto}, " +
-                                                        "pickingCompleto=${respuesta.pickingCompleto}, " +
-                                                        "detalles=${respuesta.detallesCompletados}/${respuesta.totalDetalles}"
+                                                        "pickingCompleto=${respuesta.pickingCompleto}"
                                             )
-
 
                                             if (!respuesta.success) {
 
                                                 mensajeError2 =
-                                                    "Error registrando la serie " +
-                                                            "$serie: ${respuesta.message}"
+                                                    "Error registrando la serie $numeroSerie: ${respuesta.message}"
 
                                                 showDialogCantidad = true
 
+                                                CantidadEscaneada = ""
+
                                                 return@launch
+                                            }
+
+                                            // =================================================
+                                            // SI TERMINÓ EL DETALLE
+                                            // =================================================
+
+                                            if (respuesta.detalleCompleto) {
+
+                                                if (respuesta.pickingCompleto) {
+
+                                                    CantidadEscaneada = ""
+
+                                                    mensajeError2 = "¡PICKING TERMINADO!"
+
+                                                    showDialogCantidad = true
+
+                                                    return@launch
+
+                                                } else {
+
+                                                    val siguiente =
+                                                        respuesta.siguienteDetalle
+
+                                                    if (siguiente != null) {
+
+                                                        CantidadEscaneada = ""
+
+                                                        navController.navigate(
+                                                            "detalleUbicacionPicking/" +
+                                                                    "$absEntry/" +
+                                                                    "${siguiente.BinAbs}"
+                                                        ) {
+                                                            popUpTo(
+                                                                "detalleUbicacionPicking/$absEntry/$binAbs"
+                                                            ) {
+                                                                inclusive = true
+                                                            }
+                                                        }
+
+                                                        return@launch
+
+                                                    } else {
+
+                                                        mensajeError2 =
+                                                            "No se encontró el siguiente detalle."
+
+                                                        showDialogCantidad = true
+
+                                                        return@launch
+                                                    }
+                                                }
                                             }
                                         }
 
+                                        // =================================================
+                                        // ETIQUETA REGISTRADA
+                                        // =================================================
+
                                         Log.d(
                                             "*MAKITA*PICKING*",
-                                            "TODAS LAS SERIES REGISTRADAS CORRECTAMENTE"
+                                            "TODAS LAS SERIES REGISTRADAS CORRECTAMENTE | " +
+                                                    "Cantidad=$cantidadEtiqueta"
                                         )
 
+                                        CantidadEscaneada = ""
+
+                                        mensajeError2 =
+                                            if (cantidadEtiqueta == 1L) {
+                                                "Herramienta registrada correctamente.\n\n" +
+                                                        "Cantidad capturada: 1"
+                                            } else {
+                                                "Caja MASTER registrada correctamente.\n\n" +
+                                                        "Series registradas: $cantidadEtiqueta"
+                                            }
+
+                                        showDialogCantidad = true
+
+                                        delay(100)
+
+                                        text = ""
+                                        extractedText = ""
+                                        extractedText2 = ""
+                                        extractedText3 = ""
+                                        extractedText4 = ""
+                                        textFieldValue2 = ""
+                                        cantidad = ""
+
+                                        itemFocusRequester.requestFocus()
                                     }
 
 
@@ -780,6 +993,42 @@ fun LecturaPickingScreen(
 
                                 } else {
 
+                                    try {
+
+                                        val toneGenerator =
+                                            ToneGenerator(
+                                                AudioManager.STREAM_ALARM,
+                                                100
+                                            )
+
+                                        toneGenerator.startTone(
+                                            ToneGenerator.TONE_CDMA_ABBR_ALERT,
+                                            350
+                                        )
+
+                                        Handler(Looper.getMainLooper()).postDelayed({
+
+                                            toneGenerator.startTone(
+                                                ToneGenerator.TONE_CDMA_ABBR_ALERT,
+                                                350
+                                            )
+
+                                        }, 400)
+
+                                        Handler(Looper.getMainLooper()).postDelayed({
+                                            toneGenerator.release()
+                                        }, 850)
+
+
+                                    } catch (e: Exception) {
+                                        Log.e(
+                                            "*MAKITA*",
+                                            "Error reproduciendo sonido: ${e.message}"
+                                        )
+                                    }
+
+
+
                                     mensajeError2 =
                                         "Ubicación incorrecta. Se esperaba: ${codigoEsperado.trim()}"
 
@@ -842,30 +1091,80 @@ fun LecturaPickingScreen(
 
                 OutlinedTextField(
                     value = text,
+
                     onValueChange = { newText ->
 
                         text = newText
-                        coroutineScope.launch {
+/*
+                        lecturaItemJob?.cancel()
+
+                        lecturaItemJob =
+
+ */
+
+                            coroutineScope.launch {
 
                             try {
 
-                                if (newText.length < 20) {
+                                Log.d(
+                                    "*MAKITA*",
+                                    "ITEM: $newText - LARGOXX: ${newText.length}"
+                                )
 
-                                    extractedText = newText.trim()
+
+                                if (newText.isEmpty()) {
+                                    return@launch
+                                }
+
+                                Log.d(
+                                    "*MAKITA*",
+                                    "ITEM: $newText - LARGOXX: ${newText.length}"
+                                )
+
+
+                                if  (newText.length < 20) {
+
+                                    Log.d(
+                                        "*MAKITA*PICKING*",
+                                        "LECTURA MENOR A 20: [$newText] - LARGO: ${newText.length}"
+                                    )
+
+                                    mensajeError2 =
+                                        "Item incorrecto largo de etiqueta: ${newText.length}. Escanee la etiqueta correcta el item: ${itemCode.trim()} "
+
+                                    text = ""
+
+                                    extractedText = ""
                                     extractedText2 = ""
                                     extractedText3 = ""
                                     extractedText4 = ""
 
+                                    textFieldValue2 = ""
+                                    cantidad = ""
+                                    CantidadEscaneada = ""
+                                    response = emptyList()
+
+                                    showDialogItem = true
+
+                                    delay(100)
+
+                                    itemFocusRequester.requestFocus()
+
                                     return@launch
                                 }
 
-                                extractedText = newText.substring(0, 20).trim()
+
+
+                                extractedText =
+                                    newText.substring(0, 20).trim()
 
 
                                 //ACA VALIDANDO ITEM IGUAL A LO SCANEADO
 
                                 if (extractedText.trim() != itemCode.trim()) {
-                                    mensajeError2 = "Item incorrecto. Escanee el item indicado en el picking ${itemCode.trim()}"
+
+                                    mensajeError2 =
+                                        "Item incorrecto ${extractedText.trim()}. Escanee el item indicado en el picking ${itemCode.trim()}"
 
                                     text = ""
                                     extractedText = ""
@@ -874,16 +1173,19 @@ fun LecturaPickingScreen(
                                     extractedText4 = ""
                                     textFieldValue2 = ""
                                     cantidad = ""
+                                    CantidadEscaneada = ""
                                     response = emptyList()
 
                                     showDialogItem = true
 
                                     return@launch
-
                                 }
 
 
-                                gTipoItem = apiService.consultarTipoItem(extractedText.trim()).trim()
+                                gTipoItem =
+                                    apiService.consultarTipoItem(
+                                        extractedText.trim()
+                                    ).trim()
 
 
                                 Log.d(
@@ -891,12 +1193,42 @@ fun LecturaPickingScreen(
                                     "TIPO ITEM: $gTipoItem"
                                 )
 
-                                Log.d(
-                                    "*MAKITA*",
-                                    "ITEM: $newText - LARGOXX: ${newText.length}"
-                                )
 
-                                if (gTipoItem == "HERRAMIENTAS") {
+
+
+
+                                if (gTipoItem.trim().uppercase() == "HERRAMIENTAS") {
+
+                                    // =================================================
+                                    // VALIDAR LARGO MÍNIMO DE LA ETIQUETA
+                                    // =================================================
+
+                                    if (newText.length <= 30) {
+
+                                        mensajeError2 =
+                                            "Etiqueta de herramienta inválida.\n\n" +
+                                                    "La etiqueta debe contener más de 30 caracteres."
+
+                                        // LIMPIAR COMPLETAMENTE LA LECTURA
+                                        text = ""
+                                        extractedText = ""
+                                        extractedText2 = ""
+                                        extractedText3 = ""
+                                        extractedText4 = ""
+                                        textFieldValue2 = ""
+                                        cantidad = ""
+                                        CantidadEscaneada = ""
+                                        response = emptyList()
+
+                                        showDialogItem = true
+
+                                        delay(100)
+
+                                        itemFocusRequester.requestFocus()
+
+                                        return@launch
+                                    }
+
 
                                     if (newText.length > 20) {
 
@@ -906,50 +1238,84 @@ fun LecturaPickingScreen(
                                                 newText.length.coerceAtMost(29)
                                             ).trim()
 
+
                                         extractedText3 =
                                             newText.substring(
                                                 29,
                                                 newText.length.coerceAtMost(38)
                                             ).trim()
 
+
                                         extractedText4 =
                                             if (newText.length > 39) {
+
                                                 newText.substring(
                                                     39,
                                                     newText.length.coerceAtMost(52)
                                                 ).trim()
+
                                             } else {
                                                 ""
                                             }
 
+
                                         Log.d(
                                             "*MAKITA*",
-                                            "ITEM: $newText | SERIE 1: ${extractedText2}"
-                                        )
-                                        Log.d(
-                                            "*MAKITA*",
-                                            "ITEM: $newText | SERIE 2: ${extractedText3}"
-                                        )
-                                        Log.d(
-                                            "*MAKITA*",
-                                            "ITEM: $newText | EAN: ${extractedText4}"
+                                            "ITEM: $newText | SERIE 1: $extractedText2"
                                         )
 
+                                        Log.d(
+                                            "*MAKITA*",
+                                            "ITEM: $newText | SERIE 2: $extractedText3"
+                                        )
+
+                                        Log.d(
+                                            "*MAKITA*",
+                                            "ITEM: $newText | EAN: $extractedText4"
+                                        )
 
 
                                         try {
+
                                             val numeroDesde =
-                                                extractedText2.toInt()
+                                                extractedText2.trim().toLong()
+
 
                                             val numeroHasta =
-                                                extractedText3.toInt()
+                                                extractedText3.trim().toLong()
 
-                                            cantidad =
-                                                ((numeroHasta - numeroDesde) + 1).toString()
+
+                                            val cantidadEtiqueta =
+                                                (numeroHasta - numeroDesde) + 1L
+
+
+                                            if (cantidadEtiqueta > 0) {
+
+                                                cantidad =
+                                                    cantidadEtiqueta.toString()
+
+                                                CantidadEscaneada =
+                                                    cantidadEtiqueta.toString()
+
+
+                                                Log.d(
+                                                    "*MAKITA*PICKING*",
+                                                    "HERRAMIENTA | " +
+                                                            "SERIE DESDE=$extractedText2 | " +
+                                                            "SERIE HASTA=$extractedText3 | " +
+                                                            "CANTIDAD ESCANEADA=$CantidadEscaneada"
+                                                )
+
+                                            } else {
+
+                                                cantidad = ""
+                                                CantidadEscaneada = ""
+                                            }
 
                                         } catch (e: Exception) {
 
                                             cantidad = ""
+                                            CantidadEscaneada = ""
                                         }
 
 
@@ -957,7 +1323,13 @@ fun LecturaPickingScreen(
 
                                             keyboardController?.hide()
 
-                                            response35 = apiService.validarTipoItem(extractedText.trim(), gTipoItem)
+
+                                            response35 =
+                                                apiService.validarTipoItem(
+                                                    extractedText.trim(),
+                                                    gTipoItem
+                                                )
+
 
                                             if (response35 == "NO") {
 
@@ -974,6 +1346,7 @@ fun LecturaPickingScreen(
                                                 textFieldValue2 = ""
 
                                                 cantidad = ""
+                                                CantidadEscaneada = ""
                                                 response = emptyList()
 
                                                 delay(100)
@@ -983,6 +1356,7 @@ fun LecturaPickingScreen(
                                                 return@launch
                                             }
 
+
                                             Log.d(
                                                 "*MAKITA*",
                                                 "ITEM: $newText | LARGO: ${newText.length}"
@@ -990,6 +1364,7 @@ fun LecturaPickingScreen(
 
 
                                             textFieldValue2 = ""
+
 
                                             val apiResponse =
                                                 apiService.obtenerNombreItem(
@@ -1001,7 +1376,10 @@ fun LecturaPickingScreen(
                                             // 9. RESPUESTA VACÍA
                                             // =================================================
 
-                                            if (!apiResponse.success || apiResponse.data.isEmpty()){
+                                            if (
+                                                !apiResponse.success ||
+                                                apiResponse.data.isEmpty()
+                                            ) {
 
                                                 mensajeError =
                                                     "No se encontraron datos para el item ${extractedText.trim()}"
@@ -1014,9 +1392,9 @@ fun LecturaPickingScreen(
                                                 extractedText3 = ""
                                                 extractedText4 = ""
                                                 textFieldValue2 = ""
-                                               // secondTextFieldValue = ""
                                                 response = emptyList()
                                                 cantidad = ""
+                                                CantidadEscaneada = ""
 
                                                 delay(100)
 
@@ -1031,8 +1409,8 @@ fun LecturaPickingScreen(
                                                     it.item.isBlank()
                                                 }
 
-                                            if (tieneValoresNulos) {
 
+                                            if (tieneValoresNulos) {
 
                                                 mensajeError =
                                                     "El item ${extractedText.trim()} no tiene información válida"
@@ -1045,9 +1423,9 @@ fun LecturaPickingScreen(
                                                 extractedText3 = ""
                                                 extractedText4 = ""
                                                 textFieldValue2 = ""
-
                                                 response = emptyList()
                                                 cantidad = ""
+                                                CantidadEscaneada = ""
 
                                                 delay(100)
 
@@ -1057,44 +1435,55 @@ fun LecturaPickingScreen(
                                             }
 
 
-                                            response = apiResponse.data
+                                            response =
+                                                apiResponse.data
+
 
                                             if (response.isNotEmpty()) {
 
-                                                textFieldValue2 = response.first().descripcion.trim()
-
-
+                                                textFieldValue2 =
+                                                    response.first().descripcion.trim()
                                             }
 
-                                            //extractedTextFocusRequester.requestFocus()
 
                                             keyboardController?.hide()
-                                            delay(100)
-                                            cantidadFocusRequester.requestFocus()
 
+                                            delay(100)
+
+                                            cantidadFocusRequester.requestFocus()
                                         }
                                     }
+
 
                                 } else {
 
                                     // =====================================================
-                                    // 13. ACCESORIOS / REPUESTOS / OTROS
+                                    // ACCESORIOS / REPUESTOS / OTROS
                                     // =====================================================
-                                    // SCANEAN LA ETIQUETA QUE TIENE LARGO 52
+                                    // ESTE BLOQUE SE MANTIENE IGUAL
                                     // =====================================================
 
+                                    if (newText.length >= 52) {
 
-                                    if (newText.length >= 52)
-                                    {
-                                        extractedText = newText.substring(0, 20).trim()
-                                        extractedText2 = newText.substring(20,(20 + 18).coerceAtMost(newText.length)).trim()
+                                        extractedText =
+                                            newText.substring(0, 20).trim()
+
+                                        extractedText2 =
+                                            newText.substring(
+                                                20,
+                                                (20 + 18).coerceAtMost(newText.length)
+                                            ).trim()
                                     }
 
-                                    response35 = apiService.validarTipoItem(extractedText.trim(),gTipoItem)
+
+                                    response35 =
+                                        apiService.validarTipoItem(
+                                            extractedText.trim(),
+                                            gTipoItem
+                                        )
 
 
                                     response35 = "SI"
-
 
 
                                     if (response35 == "NO") {
@@ -1122,7 +1511,9 @@ fun LecturaPickingScreen(
                                         return@launch
                                     }
 
+
                                     textFieldValue2 = ""
+
 
                                     val apiResponse =
                                         apiService.obtenerNombreItem(
@@ -1130,7 +1521,10 @@ fun LecturaPickingScreen(
                                         )
 
 
-                                    if (!apiResponse.success || apiResponse.data.isEmpty())  {
+                                    if (
+                                        !apiResponse.success ||
+                                        apiResponse.data.isEmpty()
+                                    ) {
 
                                         mensajeError =
                                             "No se encontraron datos para el item ${extractedText.trim()}"
@@ -1160,8 +1554,8 @@ fun LecturaPickingScreen(
                                             it.item == null
                                         }
 
-                                    if (tieneValoresNulos) {
 
+                                    if (tieneValoresNulos) {
 
                                         mensajeError =
                                             "El item ${extractedText.trim()} no tiene información válida"
@@ -1185,17 +1579,29 @@ fun LecturaPickingScreen(
                                         return@launch
                                     }
 
-                                    response = apiResponse.data
+
+                                    response =
+                                        apiResponse.data
+
 
                                     if (response.isNotEmpty()) {
-                                        textFieldValue2 = response.first().descripcion.trim()
+
+                                        textFieldValue2 =
+                                            response.first().descripcion.trim()
                                     }
 
-                                    keyboardController?.hide()
-                                    delay(100)
-                                    cantidadFocusRequester.requestFocus()
 
+                                    keyboardController?.hide()
+
+                                    delay(100)
+
+                                    cantidadFocusRequester.requestFocus()
                                 }
+
+
+                            } catch (e: kotlinx.coroutines.CancellationException) {
+
+                                throw e
 
                             } catch (e: Exception) {
 
@@ -1220,6 +1626,8 @@ fun LecturaPickingScreen(
                                     textFieldValue2 = ""
 
                                     cantidad = ""
+                                    CantidadEscaneada = ""
+                                    response = emptyList()
 
                                     delay(100)
 
@@ -1260,7 +1668,7 @@ fun LecturaPickingScreen(
                                 if (itemManual.uppercase() != itemCode.trim().uppercase()) {
 
                                     mensajeError2 =
-                                        "Item incorrecto. Escanee el item indicado en el picking ${itemCode.trim()}"
+                                        "Item incorrecto ${itemManual.uppercase()}. Escanee el item indicado en el picking ${itemCode.trim()}"
 
                                     text = ""
                                     extractedText = ""
@@ -1390,7 +1798,7 @@ fun LecturaPickingScreen(
 
                 if (showDialogItem) {
                     mostrarDialogo6(
-                        titulo = "Error",
+                        titulo = "Alerta!",
                         mensaje = mensajeError2,
                         onDismiss = {
                             showDialogItem = false

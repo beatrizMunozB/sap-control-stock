@@ -1,0 +1,247 @@
+package com.makita.controlstock.ui.screens
+
+import android.util.Log
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.QrCodeScanner
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import com.makita.controlstock.data.network.PickingOrdenResponse
+import com.makita.controlstock.data.network.RetrofitClient
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
+@Composable
+fun ConsultaPedidoClienteScreen(
+    navController: NavController
+) {
+    var numeroOrden  by remember { mutableStateOf("") }
+    var pickings     by remember { mutableStateOf<List<PickingOrdenResponse>>(emptyList()) }
+    var cargando     by remember { mutableStateOf(false) }
+    var mensajeError by remember { mutableStateOf("") }
+    val apiService = RetrofitClient.apiService
+    val keyboardController = LocalSoftwareKeyboardController.current
+
+
+
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            IconButton(onClick = { navController.popBackStack() }) {
+                Icon(
+                    imageVector = Icons.Default.ArrowBack,
+                    contentDescription = "Volver"
+                )
+            }
+            Text(
+                text = "Consultar  Orden de Venta x Picking",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+
+
+        OutlinedTextField(
+            value = numeroOrden,
+            onValueChange = { nuevoValor ->
+                numeroOrden = nuevoValor.filter { it.isDigit() }
+            },
+            modifier = Modifier.fillMaxWidth(),
+            label = {
+                Text("Numero Orden de Venta")
+            },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Number
+            )
+        )
+
+        Spacer(
+            modifier = Modifier.height(12.dp)
+        )
+
+        Button(
+            onClick = {
+
+                keyboardController?.hide()
+
+                if (numeroOrden.isBlank()) {
+                    mensajeError = "Ingrese el número de Orden de Venta."
+                    return@Button
+                }
+
+                CoroutineScope(Dispatchers.IO).launch {
+
+                    cargando = true
+                    mensajeError = ""
+                    pickings = emptyList()
+
+                    try {
+
+                        val respuesta =
+                            apiService.obtenerPickingsPorOrden(
+                                numeroOrden.toInt()
+                            )
+
+                        withContext(Dispatchers.Main) {
+
+                            if (respuesta.success) {
+
+                                pickings = respuesta.data
+
+                                if (respuesta.data.isEmpty()) {
+                                    mensajeError =
+                                        "No se encontraron Pickings para la Orden de Venta."
+                                }
+
+                            } else {
+
+                                mensajeError = respuesta.message
+                            }
+
+                            cargando = false
+                        }
+
+                    } catch (e: Exception) {
+
+                        withContext(Dispatchers.Main) {
+
+                            mensajeError =
+                                "Error al consultar Pickings: ${e.message}"
+
+                            cargando = false
+                        }
+                    }
+                }
+            },
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !cargando,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color(0xFF4FC3F7)
+            )
+        ) {
+            Text(
+                if (cargando) {
+                    "CONSULTANDO..."
+                } else {
+                    "CONSULTAR"
+                }
+            )
+        }
+
+        Spacer(
+            modifier = Modifier.height(16.dp)
+        )
+
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+
+            items(
+                items = pickings
+            ) { picking ->
+
+                Card(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+
+                    Column(
+                        modifier = Modifier.padding(16.dp)
+                    ) {
+
+                        Text(
+                            text = "Picking: ${picking.pickingAbsEntry}",
+                            style = MaterialTheme.typography.titleMedium
+                        )
+
+                        Spacer(
+                            modifier = Modifier.height(4.dp)
+                        )
+
+                        Text(
+                            text = "Cliente: ${picking.cardCode ?: "-"} - ${picking.cardName ?: "-"}",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+
+                        Text(
+                            text = "Usuario: ${
+                                picking.usuarioAsignado ?: "Sin asignar"
+                            }"
+                        )
+
+                        Text(
+                            text = "Ítems: ${picking.cantidadItems}"
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+
+
+
+
+
+
+
+    }

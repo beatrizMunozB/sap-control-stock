@@ -142,7 +142,11 @@ import com.makita.controlstock.ui.screens.LecturaPickingScreen
 import com.makita.controlstock.ui.screens.PickingSolicitudScreen
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.material.icons.filled.Print
+import com.makita.controlstock.ui.screens.ConsultaPedidoClientePickingScreen
+import com.makita.controlstock.ui.screens.ConsultaPedidoClienteScreen
 import com.makita.controlstock.ui.screens.ProcesadoPickingScreen
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.style.TextAlign
 
 
 val fechaHoy = LocalDate.now()
@@ -303,7 +307,6 @@ fun AppNavigation() {
         }
 
 
-
         composable("consulta_ubicacion") {
             ConsultaStockScreen(navController)
         }
@@ -314,6 +317,14 @@ fun AppNavigation() {
 
         composable("consulta_bodega") {
             ConsultaStockBodegaScreen(navController)
+        }
+
+        composable("consulta_pedido") {
+            ConsultaPedidoClienteScreen(navController)
+        }
+
+        composable("consulta_picking") {
+            ConsultaPedidoClientePickingScreen(navController)
         }
 
 
@@ -663,38 +674,34 @@ fun PantallaLogin(navController: NavController) {
 
     var usuario by rememberSaveable { mutableStateOf("mktcapturati") }
     var password by rememberSaveable { mutableStateOf("M@kita26@") }
-
-
     var error by rememberSaveable { mutableStateOf("") }
     var usuarioSAP by rememberSaveable { mutableStateOf("") }
-
     val passwordFocusRequester = remember { FocusRequester() }
     val coroutineScope = rememberCoroutineScope()
-
     var showErrorDialogUSU by remember { mutableStateOf(false) }
     var errorMessageUSU by remember { mutableStateOf("") }
     var usuarioValidado by rememberSaveable { mutableStateOf(false) }
     val usuarioFocusRequester = remember { FocusRequester() }
-    val keyboardController = LocalSoftwareKeyboardController.current
-
     var isLoading by remember { mutableStateOf(false) }
-
-
     var visible by remember { mutableStateOf(false) }
-
     val offsetX = remember { Animatable(-300f) }
     val rotation = remember { Animatable(0f) }
     val rotationX = remember { Animatable(90f) }
  //   val rotationY = remember { Animatable(90f) }
     val rotationYAnim = remember { Animatable(90f) }
-
     var mostrarDialogoImpresora by remember { mutableStateOf(false) }
     var impresoraSeleccionada by remember { mutableStateOf("") }
-
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val focusManager = LocalFocusManager.current
 
 
 
     CambiarColorBarraEstado(Color(0xFF00909E))
+
+    LaunchedEffect(Unit) {
+        focusManager.clearFocus(force = true)
+        keyboardController?.hide()
+    }
 
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -747,12 +754,13 @@ fun PantallaLogin(navController: NavController) {
                 }
 
                 Image(
-                    painter = painterResource(id = R.drawable.makitarojosmall),
+                    painter = painterResource(id = R.drawable.makita_143x31_transparente),
                     contentDescription = null,
                     contentScale = ContentScale.Fit,
                     modifier = Modifier
-                        .fillMaxWidth(0.5f)   // 👈 ocupa 50% del ancho
-                        .height(90.dp)        // 👈 tamaño fijo visible
+                        .fillMaxWidth(0.5f)
+                        .height(90.dp)
+                        .align(Alignment.CenterHorizontally)
                 )
 
                 Spacer(modifier = Modifier.height(14.dp))
@@ -760,7 +768,8 @@ fun PantallaLogin(navController: NavController) {
                 Text(
                     text = "Iniciar sesión",
                     fontSize = 26.sp,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center
                 )
 
                 Spacer(modifier = Modifier.height(24.dp))
@@ -839,6 +848,11 @@ fun PantallaLogin(navController: NavController) {
                     keyboardOptions = KeyboardOptions(
                         keyboardType = KeyboardType.Password,
                         imeAction = ImeAction.Done
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onDone = {
+                            keyboardController?.hide()
+                        }
                     ),
                     modifier = Modifier
                         .fillMaxWidth()
@@ -1209,9 +1223,12 @@ fun CardOpcion(opcion: OpcionDashboard, navController: NavController) {
         opcion.ruta.startsWith("traslados") -> Color(0xFFFF9800)
 
         // 🔵 Submenú consultas
-        opcion.ruta == "consulta_stock" ||
+                opcion.ruta == "consulta_stock" ||
                 opcion.ruta == "consulta_ubicacion" ||
-                opcion.ruta == "consulta_bodega" -> Color.Red
+                opcion.ruta == "consulta_bodega" ||
+                opcion.ruta == "consulta_pedido" ||
+                opcion.ruta == "consulta_picking"
+                     -> Color.Red
 
         // 🟢 Entrada
         opcion.ruta == "traslado_entrada" ||

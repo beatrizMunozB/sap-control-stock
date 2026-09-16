@@ -35,7 +35,9 @@ fun ConsultasScreen(navController: NavController) {
     val opciones = listOf(
         OpcionDashboard("Stock por Ubicacion", "Consulta de stock por ubicacion", Icons.Default.Place, "consulta_ubicacion"),
         OpcionDashboard("Stock por Item", "Consulta de stock por Item", Icons.Default.Search, "consulta_stock"),
-        OpcionDashboard("Stock por Bodega", "Consulta de stock por Bodega", Icons.Default.Warehouse, "consulta_bodega")
+        OpcionDashboard("Stock por Bodega", "Consulta de stock por Bodega", Icons.Default.Warehouse, "consulta_bodega") ,
+        OpcionDashboard("Consulta de Nota Pedido ", "Consulta x Pedido de Venta", Icons.Default.Warehouse, "consulta_pedido"),
+        OpcionDashboard("Consulta de Picking ", "Consulta x Numero de Picking ", Icons.Default.Warehouse, "consulta_picking")
     )
 
     Column(

@@ -57,115 +57,259 @@ import kotlinx.coroutines.withContext
 
 @Composable
 fun ConsultaStockItemScreen(navController: NavController) {
+
     var ubicacion by remember { mutableStateOf("") }
     var ubicacionActual by rememberSaveable { mutableStateOf("") }
     var lastInput by remember { mutableStateOf("") }
-    val coroutineScope = rememberCoroutineScope()
-    var errorState by rememberSaveable { mutableStateOf<String?>(null) }
-    val ubicacionFocusRequester = remember { FocusRequester() }
-    var mostrarDialogoUbicacionNoExiste by rememberSaveable { mutableStateOf(false) }
-    var response by rememberSaveable { mutableStateOf<List<UbicacionResponse>>(emptyList()) }
 
-    val keyboardController = LocalSoftwareKeyboardController.current
-    var mostrarDialogoWifiError by remember { mutableStateOf(false) }
-    var showDialog by remember { mutableStateOf(false) }
-    var textoDialogoWifiError by remember { mutableStateOf("") }
-    var showErrorDialog by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
+
+    var errorState by rememberSaveable {
+        mutableStateOf<String?>(null)
+    }
+
+    val ubicacionFocusRequester = remember {
+        FocusRequester()
+    }
+
+    var mostrarDialogoUbicacionNoExiste by rememberSaveable {
+        mutableStateOf(false)
+    }
+
+    var response by remember {
+        mutableStateOf<List<UbicacionResponse>>(emptyList())
+    }
+
+    val keyboardController =
+        LocalSoftwareKeyboardController.current
+
+    var mostrarDialogoWifiError by remember {
+        mutableStateOf(false)
+    }
+
+    var showDialog by remember {
+        mutableStateOf(false)
+    }
+
+    var textoDialogoWifiError by remember {
+        mutableStateOf("")
+    }
+
+    var showErrorDialog by remember {
+        mutableStateOf(false)
+    }
+
     val context = LocalContext.current
-    var mensajeError by remember { mutableStateOf("") }
-    var secondTextFieldValue by remember { mutableStateOf("") }
+
+    var mensajeError by remember {
+        mutableStateOf("")
+    }
+
+    var secondTextFieldValue by remember {
+        mutableStateOf("")
+    }
+
 
     fun validarItem(UbicacionIngresado: String) {
 
+        Log.d(
+            "*MAKITA*",
+            "ENTER SCANNER ENTRA A validar item → VALIDANDO $UbicacionIngresado"
+        )
 
-        Log.d("*MAKITA*", "ENTER SCANNER ENTRA A validar item → VALIDANDO $UbicacionIngresado")
+        val ubicacionLimpio =
+            UbicacionIngresado.trim()
 
-        val ubicacionLimpio = UbicacionIngresado.trim()
-
-        Log.d("*MAKITA*", " ingresand modo 1 $ubicacionLimpio ")
+        Log.d(
+            "*MAKITA*",
+            "ingresando modo 1 $ubicacionLimpio"
+        )
 
         if (ubicacionLimpio.isEmpty()) {
-            errorState = "Ingrese una ubicacion"
+
+            errorState = "Ingrese Item"
+
             return
         }
 
         errorState = ""
 
-        CoroutineScope(Dispatchers.IO).launch {
+        coroutineScope.launch {
+
             try {
-
-                Log.d("*MAKITA*", " ingresand modo 2 $ubicacionLimpio ")
-
-                val apiResponse = apiService.obtenerStockItem(ubicacionLimpio)
-                response = apiResponse.data
 
                 Log.d(
                     "*MAKITA*",
-                    "VALIDACION: $response"
+                    "ingresando modo 2 $ubicacionLimpio"
                 )
 
-                secondTextFieldValue =
-                    apiResponse.data.firstOrNull()?.descripcion ?: ""
+                /*
+                 * La llamada al backend se ejecuta
+                 * solamente en Dispatchers.IO.
+                 */
+                val apiResponse =
+                    withContext(Dispatchers.IO) {
+                        apiService.obtenerStockItem(
+                            ubicacionLimpio
+                        )
+                    }
 
+                /*
+                 * Desde aquí volvemos al Main Thread.
+                 */
+
+                Log.d(
+                    "*MAKITA*",
+                    "VALIDACION: ${apiResponse.data}"
+                )
+
+                /*
+                 * Guardamos la respuesta.
+                 *
+                 * response usa remember y NO rememberSaveable
+                 * porque contiene una lista de objetos complejos.
+                 */
+                response =
+                    apiResponse.data
+
+                Log.d(
+                    "*MAKITA*",
+                    "DESPUES DE response"
+                )
+
+                /*
+                 * Obtenemos la descripción del primer registro.
+                 */
+                secondTextFieldValue =
+                    apiResponse.data
+                        .firstOrNull()
+                        ?.descripcion
+                        ?: ""
+
+                Log.d(
+                    "*MAKITA*",
+                    "NO PASA $secondTextFieldValue"
+                )
+
+                /*
+                 * Limpiamos el campo del scanner.
+                 */
                 ubicacion = ""
                 ubicacionActual = ""
                 lastInput = ""
 
                 keyboardController?.hide()
 
-                ubicacionFocusRequester.requestFocus()
+                /*
+                 * Primero verificamos si realmente
+                 * no llegó ningún registro.
+                 */
+                if (apiResponse.data.isNullOrEmpty()) {
 
-                withContext(Dispatchers.Main) {
+                    Log.d(
+                        "*MAKITA*",
+                        "RESPUESTA VACIA"
+                    )
 
-                    if (apiResponse.data.isNullOrEmpty()) {
-                        errorState = "No se encontraron datos para la ubicacion scaneada"
-                        ubicacionActual = ""
-                        ubicacionFocusRequester.requestFocus()
-                        return@withContext
+                    errorState =
+                        "No se encontraron datos para la ubicacion scaneada"
+
+                    ubicacionActual = ""
+
+                    ubicacionFocusRequester.requestFocus()
+
+                    return@launch
+                }
+
+                /*
+                 * Aquí solamente comprobamos si EXISTE
+                 * algún registro cuya ubicación sea null.
+                 *
+                 * La lista completa NO es null ni está vacía.
+                 */
+                val tieneValoresNulos =
+                    apiResponse.data.any {
+                        it.ubicacion == null
                     }
 
-                    val tieneValoresNulos = apiResponse.data.any { it.ubicacion == null }
+                Log.d(
+                    "*MAKITA*",
+                    "ingresando modo xxxx $tieneValoresNulos"
+                )
 
+                if (tieneValoresNulos) {
 
+                    Log.d(
+                        "*MAKITA*",
+                        "EXISTEN REGISTROS CON UBICACION NULL"
+                    )
 
-                    if (tieneValoresNulos) {
-                        Log.d("*MAKITA*", " ingresand modo $tieneValoresNulos ")
-                        errorState = "No se encontraron datos"
-                        ubicacionActual = ""
-                        mostrarDialogoUbicacionNoExiste = true
+                    errorState =
+                        "No se encontraron datos"
 
-                        ubicacionFocusRequester.requestFocus()
-                    } else {
-                        Log.d("*MAKITA*", " ingresand no tiene $tieneValoresNulos ")
+                    ubicacionActual = ""
 
-                        errorState = ""
-                        response = apiResponse.data
-                        // textFieldValue2 = apiResponse.first().descripcion
+                    /*
+                     * Por ahora NO abrimos el diálogo
+                     * porque estamos aislando el problema.
+                     *
+                     * Si quieres volver a mostrarlo,
+                     * puedes descomentar esta línea.
+                     */
+                    // mostrarDialogoUbicacionNoExiste = true
 
-                        keyboardController?.hide()
-                        ubicacionFocusRequester.requestFocus()
-                    }
+                    Log.d(
+                        "*MAKITA*",
+                        "FIN DEL IF"
+                    )
+
+                } else {
+
+                    Log.d(
+                        "*MAKITA*",
+                        "NO EXISTEN UBICACIONES NULL"
+                    )
+
+                    errorState = ""
+
+                    response =
+                        apiResponse.data
+
+                    keyboardController?.hide()
+
+                    ubicacionFocusRequester.requestFocus()
                 }
 
             } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    errorState = "Error de conexión"
 
-                    mostrarDialogoWifiError = true
-//                               Log.e("*MAKITA*", "Error obteniendo datos 22222: ${e.message}")
-                    Toast.makeText(
-                        context,
-                        "Error al obtener los datos, revise WiFi: ${e.message}",
-                        Toast.LENGTH_LONG
-                    ).show()
-                    showErrorDialog = true
+                Log.e(
+                    "*MAKITA*",
+                    "ERROR OBTENIENDO DATOS",
+                    e
+                )
 
-                }
+                errorState =
+                    "Error de conexión"
+
+                mostrarDialogoWifiError = true
+
+                textoDialogoWifiError =
+                    e.message
+                        ?: "Error desconocido"
+
+                Toast.makeText(
+                    context,
+                    "Error al obtener los datos, revise WiFi: ${e.message}",
+                    Toast.LENGTH_LONG
+                ).show()
+
+                mensajeError =
+                    e.message
+                        ?: "Error desconocido"
+
+                showErrorDialog = true
             }
         }
-
-
-
     }
 
 
@@ -174,84 +318,129 @@ fun ConsultaStockItemScreen(navController: NavController) {
             .fillMaxSize()
             .padding(16.dp)
     ) {
+
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth()
         ) {
-            IconButton(onClick = { navController.popBackStack() }) {
+
+            IconButton(
+                onClick = {
+                    navController.popBackStack()
+                }
+            ) {
+
                 Icon(
                     imageVector = Icons.Default.ArrowBack,
                     contentDescription = "Volver"
                 )
             }
+
             Text(
-                text = "Consulta Stock por Item",
+                text = "Stock por Item ",
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold
             )
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+
+        Spacer(
+            modifier = Modifier.height(24.dp)
+        )
+
 
         LaunchedEffect(Unit) {
+
             ubicacionFocusRequester.requestFocus()
         }
 
 
         OutlinedTextField(
+
             value = ubicacion,
+
             onValueChange = {
 
-                val cleanedText = it
-                    .replace("\n", "")
-                    .replace("\r", "")
-                    .replace("\t", "")
-                    .trim()
-                    .uppercase()
+                val cleanedText =
+                    it
+                        .replace("\n", "")
+                        .replace("\r", "")
+                        .replace("\t", "")
+                        .trim()
+                        .uppercase()
 
                 val valorLimitado =
-                    if (cleanedText.length > 20)
+                    if (cleanedText.length > 20) {
                         cleanedText.substring(0, 20)
-                    else
+                    } else {
                         cleanedText
+                    }
 
-                ubicacion = valorLimitado
-                ubicacionActual = valorLimitado
+                ubicacion =
+                    valorLimitado
+
+                ubicacionActual =
+                    valorLimitado
 
                 if (valorLimitado != lastInput) {
 
-                    lastInput = valorLimitado
+                    lastInput =
+                        valorLimitado
 
                     if (valorLimitado.isNotEmpty()) {
 
-                        Log.d("*MAKITA*", "VALIDANDO")
-                        validarItem(valorLimitado)
+                        Log.d(
+                            "*MAKITA*",
+                            "VALIDANDO"
+                        )
+
+                        validarItem(
+                            valorLimitado
+                        )
                     }
                 }
             },
 
-            label = { Text("Escanear Item") },
-            placeholder = { Text("Escanear Ubicacion") },
+            label = {
+                Text(
+                    "Escanear Etiqueta Item"
+                )
+            },
+
+            placeholder = {
+                Text(
+                    "Escanear Etiqueta Item"
+                )
+            },
 
             leadingIcon = {
+
                 Icon(
-                    imageVector = Icons.Default.QrCodeScanner,
-                    contentDescription = "Escanear"
+                    imageVector =
+                        Icons.Default.QrCodeScanner,
+                    contentDescription =
+                        "Escanear"
                 )
             },
 
             trailingIcon = {
+
                 if (ubicacion.isNotEmpty()) {
+
                     IconButton(
                         onClick = {
+
                             ubicacion = ""
                             ubicacionActual = ""
                             lastInput = ""
                         }
                     ) {
+
                         Icon(
-                            imageVector = Icons.Default.Clear,
-                            contentDescription = "Borrar texto"
+                            imageVector =
+                                Icons.Default.Clear,
+                            contentDescription =
+                                "Borrar texto"
                         )
                     }
                 }
@@ -259,95 +448,222 @@ fun ConsultaStockItemScreen(navController: NavController) {
 
             singleLine = true,
 
-            keyboardOptions = KeyboardOptions(
-                imeAction = ImeAction.Search,
-                keyboardType = KeyboardType.Text
-            ),
+            keyboardOptions =
+                KeyboardOptions(
+                    imeAction =
+                        ImeAction.Search,
+                    keyboardType =
+                        KeyboardType.Text
+                ),
 
-            modifier = Modifier
-                .width(300.dp)
-                .height(60.dp)
-                .focusRequester(ubicacionFocusRequester)
-                .onFocusChanged { focusState ->
-                    if (focusState.isFocused) {
-                        keyboardController?.hide()
+            modifier =
+                Modifier
+                    .width(300.dp)
+                    .height(60.dp)
+                    .focusRequester(
+                        ubicacionFocusRequester
+                    )
+                    .onFocusChanged { focusState ->
+
+                        if (focusState.isFocused) {
+
+                            keyboardController?.hide()
+                        }
                     }
-                }
         )
 
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(
+            modifier = Modifier.height(16.dp)
+        )
+
 
         LazyColumn {
 
             items(response) { item ->
 
                 Card(
+
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 6.dp),
-                    elevation = CardDefaults.cardElevation(4.dp)
+
+                    elevation =
+                        CardDefaults.cardElevation(
+                            4.dp
+                        )
                 ) {
 
                     Column(
-                        modifier = Modifier.padding(16.dp)
+                        modifier =
+                            Modifier.padding(16.dp)
                     ) {
 
                         Text(
-                            text = "Item: ${item.item}",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 18.sp
+                            text =
+                                "Item: ${item.item}",
+                            fontWeight =
+                                FontWeight.Bold,
+                            fontSize =
+                                18.sp
                         )
 
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(
+                            modifier =
+                                Modifier.height(4.dp)
+                        )
 
+                        Text(
+                            text =
+                                "Descripción       : ${item.descripcion}"
+                        )
 
-                        Text(text = "Descripción       : ${item.descripcion}")
-                        Text(text = "Ubicación         : ${item.ubicacion}")
-                        Text(text = "Bodega            : ${item.bodega}")
-                        Text(text = "Cantidad          : ${item.cantidad.toInt()}")
-                        Text(text = "Estado            : ${item.estado}")
-                        Text(text = "Ubicación estándar: ${item.ubicacionStandar}")
+                        Text(
+                            text =
+                                "Ubicación         : ${item.ubicacion}"
+                        )
 
+                        Text(
+                            text =
+                                "Bodega            : ${item.bodega}"
+                        )
 
+                        /*
+                         * IMPORTANTE:
+                         *
+                         * El backend entrega cantidades como:
+                         *
+                         * "1.000000"
+                         * "4.000000"
+                         * "20.000000"
+                         *
+                         * Por eso NO usamos:
+                         *
+                         * item.cantidad.toInt()
+                         *
+                         * porque eso provoca NumberFormatException.
+                         */
+                        Text(
+                            text =
+                                "Cantidad          : ${
+                                    item.cantidad
+                                        .toDoubleOrNull()
+                                        ?.toInt()
+                                        ?: 0
+                                }"
+                        )
+
+                        Text(
+                            text =
+                                "Estado            : ${item.estado}"
+                        )
+
+                        Text(
+                            text =
+                                "Ubicación estándar: ${item.ubicacionStandar}"
+                        )
                     }
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(10.dp))
 
-        TextField(
-            value = secondTextFieldValue,
-            onValueChange = {},
-            readOnly = true,
-            modifier = Modifier
-                .width(300.dp)
-                .height(60.dp)
+        Spacer(
+            modifier = Modifier.height(10.dp)
         )
 
 
+        TextField(
+
+            value =
+                secondTextFieldValue,
+
+            onValueChange = {},
+
+            readOnly = true,
+
+            modifier =
+                Modifier
+                    .width(300.dp)
+                    .height(60.dp)
+        )
+
+
+        /*
+         * Diálogo de error WiFi
+         */
         if (mostrarDialogoWifiError) {
+
             AlertDialog(
-                onDismissRequest = { mostrarDialogoWifiError = false },
-                title = { Text("Error de conexión", color = Color.Red) },
-                text = { Text(textoDialogoWifiError) },
+
+                onDismissRequest = {
+                    mostrarDialogoWifiError =
+                        false
+                },
+
+                title = {
+                    Text(
+                        "Error de conexión",
+                        color = Color.Red
+                    )
+                },
+
+                text = {
+                    Text(
+                        textoDialogoWifiError
+                    )
+                },
+
                 confirmButton = {
-                    TextButton(onClick = { mostrarDialogoWifiError = false }) {
+
+                    TextButton(
+                        onClick = {
+                            mostrarDialogoWifiError =
+                                false
+                        }
+                    ) {
+
                         Text("Aceptar")
                     }
                 }
             )
         }
 
+
+        /*
+         * Diálogo genérico que ya tenías.
+         */
         if (showDialog) {
-            mostrarDialogo3(
+
+            mostrarDialogo15(
+
                 titulo = "Error",
+
                 mensaje = mensajeError,
-                onDismiss = { showDialog = false }
+
+                onDismiss = {
+                    showDialog = false
+                }
             )
         }
-
     }
+}
+
+@Composable
+fun mostrarDialogo15(
+    titulo: String,
+    mensaje: String,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(text = titulo) },
+        text = { Text(text = mensaje) },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Aceptar")
+            }
+        }
+    )
 }
 

@@ -117,6 +117,7 @@ data class SolicitudTransferenciaRequest(
 
 
 
+
 data class UbicacionResponse(
 
     @SerializedName("Ubicacion")
@@ -692,7 +693,8 @@ data class EliminarPickingCapturaResponse(
 
 data class EnviarDetalleASAPRequest(
     val idCabecera: Int,
-    val absEntry: Int
+    val absEntry: Int,
+    val enviarParcial: Boolean
 )
 /*
 data class EnviarDetalleASAPResponse(
@@ -738,6 +740,39 @@ data class ObtenerPickingProcesadoResponse(
     val data: List<PickingCapturaResponse>,
     val message: String
 )
+
+
+data class PickingOrdenResponse(
+    val numeroOrdenVenta: Int,
+    val cardCode: String?,
+    val cardName: String?,
+    val pickingAbsEntry: Int,
+    val usuarioAsignado: String?,
+    val cantidadItems: Int
+)
+
+data class PickingOrdenApiResponse(
+    val success: Boolean,
+    val data: List<PickingOrdenResponse>,
+    val message: String
+)
+
+
+data class OrdenVentaPickingResponse(
+    val numeroOrdenVenta: Int,
+    val cardCode: String?,
+    val cardName: String?,
+    val pickingAbsEntry: Int,
+    val usuarioAsignado: String?,
+    val cantidadItems: Int
+)
+
+data class OrdenVentaPickingResponseApiResponse(
+    val success: Boolean,
+    val data: List<OrdenVentaPickingResponse>,
+    val message: String
+)
+
 
 interface ApiService
 {
@@ -1046,6 +1081,21 @@ interface ApiService
     suspend fun obtenerPDFPicking(
         @Path("idDocumento") idDocumento: Int
     ): ResponseBody
+
+    @GET("api/picking-por-orden/{docNum}")
+    suspend fun obtenerPickingsPorOrden(
+        @Path("docNum") docNum: Int
+    ): PickingOrdenApiResponse
+
+    @GET("api/orden-por-picking/{absEntry}")
+    suspend fun obtenerOrdenPorPicking(
+        @Path("absEntry") absEntry: Int
+    ): OrdenVentaPickingResponseApiResponse
+
+
+
+    
+
 
 
 

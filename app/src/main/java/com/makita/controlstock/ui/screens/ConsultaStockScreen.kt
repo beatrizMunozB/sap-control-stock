@@ -194,7 +194,7 @@ fun ConsultaStockScreen(navController: NavController) {
                 )
             }
             Text(
-                text = "Consulta Stock",
+                text = "Stock por Ubicacion",
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold
             )
