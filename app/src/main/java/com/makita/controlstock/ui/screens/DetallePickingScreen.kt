@@ -123,13 +123,14 @@ fun DetallePickingScreen(
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
                     Text(
-                        text = "Picking N° $AbsEntry",
+                        text = "$AbsEntry",
                         modifier = Modifier.fillMaxWidth(),
                         textAlign = TextAlign.Center,
-                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 20.sp,
                         color = Color.White
                     )
                 }
@@ -144,6 +145,8 @@ fun DetallePickingScreen(
                 items(detalle) { item ->
 
                     val BinAbs = item.BinAbs
+
+                    val BarCode = item.BarCode
 
                     val cantidadBin =
                         item.CantidadBin?.toInt() ?: 0
@@ -210,7 +213,7 @@ fun DetallePickingScreen(
                             ) {
 
                                 Text(
-                                    text = item.BinCode ?: "",
+                                    text = item.BarCode ?: "",
                                     fontSize = 13.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color.Black,
@@ -277,22 +280,7 @@ fun DetallePickingScreen(
                 }
             }
 
-            Button(
-                onClick = {
-                    navController.popBackStack()
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 8.dp)
-                    .height(55.dp)
-            ) {
 
-                Text(
-                    text = "VOLVER",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
         }
     }
 }

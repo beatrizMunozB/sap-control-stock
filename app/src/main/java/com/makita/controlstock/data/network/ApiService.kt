@@ -327,7 +327,9 @@ val CantidadBin :   Double?,
 val CantidadPickeadaBin :  Double?,
 val OrderEntry : String?,
 val OrderLine : String?,
-val BaseObject : String?
+val BaseObject : String?,
+val BarCode : String?
+
 )
 
 
@@ -356,7 +358,8 @@ data class PickingDetalleUbicacionResponse(
     val OrderEntry : String?,
     val OrderLine : String?,
     val BaseObject : String?,
-    val CantidadCapturada: Double?
+    val CantidadCapturada: Double?,
+    val BarCode : String?
 )
 
 data class RegistrarPickingCapturaRequest(
@@ -773,6 +776,20 @@ data class OrdenVentaPickingResponseApiResponse(
     val message: String
 )
 
+data class UsuarioSapResponse(
+    val status: Int,
+    val data: List<UsuarioSap>
+)
+
+data class UsuarioSap(
+    val USER_CODE: String,
+    val ACCESO: String,
+    val WhsCode: String,
+    val NombreSap: String,
+    val NombreSapMin: String,
+    val NombreResponsable: String
+)
+
 
 interface ApiService
 {
@@ -1092,6 +1109,10 @@ interface ApiService
         @Path("absEntry") absEntry: Int
     ): OrdenVentaPickingResponseApiResponse
 
+    @GET("api/obtener-usuario-sap/{usuario}")
+    suspend fun obtenerUsuarioSap(
+        @Path("usuario") usuario: String
+    ): Response<UsuarioSapResponse>
 
 
     

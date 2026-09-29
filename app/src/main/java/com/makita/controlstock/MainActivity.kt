@@ -441,7 +441,7 @@ fun AppNavigation() {
 
 
         composable(
-            route = "lecturaPicking/{idCabecera}/{idDetalle}/{absEntry}/{binCode}/{binAbs}/{whsCode}/{ItemCode}",
+            route = "lecturaPicking/{idCabecera}/{idDetalle}/{absEntry}/{binCode}/{binAbs}/{whsCode}/{ItemCode}/{barCode}",
             arguments = listOf(
                 navArgument("idCabecera") { type = NavType.IntType },
                 navArgument("idDetalle") { type = NavType.IntType },
@@ -450,6 +450,7 @@ fun AppNavigation() {
                 navArgument("binAbs") { type = NavType.IntType },
                 navArgument("whsCode") { type = NavType.StringType },
                 navArgument("ItemCode") { type = NavType.StringType },
+                navArgument("barCode") { type = NavType.StringType }
             )
         ) { backStackEntry ->
 
@@ -460,6 +461,7 @@ fun AppNavigation() {
             val binAbs = backStackEntry.arguments?.getInt("binAbs") ?: 0
             val whsCode = backStackEntry.arguments?.getString("whsCode") ?: ""
             val itemCode = backStackEntry.arguments?.getString("ItemCode") ?: ""
+            val barCode = backStackEntry.arguments?.getString("barCode") ?: ""
 
             LecturaPickingScreen(
                 idCabecera = idCabecera,
@@ -469,6 +471,7 @@ fun AppNavigation() {
                 binAbs = binAbs,
                 whsCode = whsCode,
                 itemCode = itemCode,
+                barCode = barCode,
                 navController = navController
             )
         }
@@ -791,19 +794,68 @@ fun PantallaLogin(navController: NavController) {
                             if (!focusState.isFocused && usuario.isNotBlank()) {
                                 coroutineScope.launch {
                                     try {
+
                                         val respuesta = apiService.validarUsuario(usuario)
 
                                         if (respuesta == "SI") {
                                             usuarioSAP = usuario
                                             usuarioValidado = true
                                             Sesion.usuario = usuario
+
+
+                                            try {
+
+                                                val respuestaSap = apiService.obtenerUsuarioSap(usuario)
+
+                                                if (respuestaSap.isSuccessful && respuestaSap.body() != null) {
+
+                                                    val datos = respuestaSap.body()!!
+
+                                                    if (datos.data.isNotEmpty()) {
+
+                                                        val usuarioSap = datos.data[0]
+
+                                                        Sesion.usuarioSap = usuarioSap.NombreSapMin
+                                                        Sesion.bodega = usuarioSap.WhsCode
+                                                        Sesion.nombreResponsable = usuarioSap.NombreResponsable
+
+
+                                                        Log.d("*MAKITA*", " usuarui $usuarioSap.NombreResponsable ")
+
+                                                        passwordFocusRequester.requestFocus()
+
+                                                    } else {
+
+                                                        errorMessageUSU = "Usuario SAP no encontrado"
+                                                        showErrorDialogUSU = true
+                                                    }
+
+                                                } else {
+
+                                                    errorMessageUSU = "No se pudo obtener el usuario SAP"
+                                                    showErrorDialogUSU = true
+                                                }
+
+                                            } catch (e: Exception) {
+
+                                                errorMessageUSU = "Error al obtener usuario SAP: ${e.message}"
+                                                showErrorDialogUSU = true
+                                            }
+
                                             passwordFocusRequester.requestFocus()
                                         } else {
                                             errorMessageUSU = "Usuario incorrecto: $usuario"
                                             showErrorDialogUSU = true
                                         }
+                                    }
+                                    catch (e: java.net.ConnectException) {
+                                        errorMessageUSU = "Servicio no activo. Llame al administrador."
+                                        showErrorDialogUSU = true
+                                    } catch (e: java.net.SocketTimeoutException) {
+                                        errorMessageUSU = "Servicio no disponible. Llame al administrador."
+                                        showErrorDialogUSU = true
                                     } catch (e: Exception) {
-                                        errorMessageUSU = "Ingrese usuario correcto: $usuario"
+                                        errorMessageUSU = "No fue posible realizar la consulta."
                                         showErrorDialogUSU = true
                                     }
                                 }
@@ -1119,11 +1171,14 @@ fun SecondScreen(navController: NavController) {
             verticalAlignment = Alignment.CenterVertically
         ) {
 
+
             Text(
-                text = "Bienvenido $usuario",
+                text = "¡Hola, ${Sesion.nombreResponsable}!",
                 fontSize = 22.sp,
-                fontWeight = FontWeight.Normal
+                fontWeight = FontWeight.SemiBold,
+                color = Color(0xFF26A69A)
             )
+
 
             IconButton(
                 onClick = {
@@ -1138,7 +1193,24 @@ fun SecondScreen(navController: NavController) {
             }
         }
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(10.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+
+
+            Text(
+                text = "Usuario $usuario",
+                fontSize = 16.sp,
+                textAlign = TextAlign.Center,
+                fontWeight = FontWeight.Normal
+            )
+        }
+
+        Spacer(modifier = Modifier.height(18.dp))
 
         LazyVerticalGrid(
             columns = GridCells.Fixed(1),

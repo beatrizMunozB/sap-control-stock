@@ -193,7 +193,6 @@ fun LecturaSolicitudScreen(
     }
 
     LaunchedEffect(Unit) {
-        text = "UC031GZ             000123456000123456Y0088381616126"
         focusRequester.requestFocus()
     }
 

@@ -170,25 +170,30 @@ fun DetalleUbicacionPickingScreen(
                     )
                 ) {
 
-                    IconButton(
-                        onClick = {
-                            navController.popBackStack()
-                        }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
 
-                        Icon(
-                            imageVector = Icons.Default.ArrowBack,
-                            contentDescription = null,
-                            tint = Color.White
+                        IconButton(
+                            onClick = {
+                                navController.popBackStack()
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ArrowBack,
+                                contentDescription = null,
+                                tint = Color.White
+                            )
+                        }
+
+                        Text(
+                            text = "PICKING",
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 20.sp
                         )
                     }
-
-                    Text(
-                        text = "PICKING",
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp
-                    )
 
                     Spacer(
                         modifier = Modifier.height(8.dp)
@@ -240,22 +245,28 @@ fun DetalleUbicacionPickingScreen(
                         modifier = Modifier.height(8.dp)
                     )
 
-                    Text(
-                        text = "UBICACION",
-                        color = Color.White,
-                        fontSize = 12.sp
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
 
-                    Spacer(
-                        modifier = Modifier.height(8.dp)
-                    )
+                        Text(
+                            text = "UBICACION",
+                            color = Color.White,
+                            fontSize = 12.sp
+                        )
 
-                    Text(
-                        text = "${item?.BinCode ?: ""} ($BinAbs)",
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp
-                    )
+                        Spacer(
+                            modifier = Modifier.width(8.dp)
+                        )
+
+                        Text(
+                            text = "${item?.BarCode ?: ""}",
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp
+                        )
+                    }
 
                     Button(
                         onClick = {
@@ -533,7 +544,9 @@ fun DetalleUbicacionPickingScreen(
                                             "${itemActualizado.BinCode}/" +
                                             "$BinAbs/" +
                                             "${itemActualizado.WhsCode}/" +
-                                            "${itemActualizado.ItemCode}"
+                                            "${itemActualizado.ItemCode}/" +
+                                            "${itemActualizado.BarCode}"
+
                                 )
 
                             } else {

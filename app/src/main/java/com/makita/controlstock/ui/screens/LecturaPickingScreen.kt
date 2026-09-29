@@ -89,6 +89,7 @@ fun LecturaPickingScreen(
     binAbs: Int,
     whsCode: String,
     itemCode : String,
+    barCode: String,
     navController: NavHostController
 ) {
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -123,6 +124,7 @@ fun LecturaPickingScreen(
     var textFieldValue2 by remember { mutableStateOf("") }
     var response35: String
     var response     by rememberSaveable { mutableStateOf<List<ItemNombreResponse>>(emptyList()) }
+    var modoManual by remember { mutableStateOf(false) }
 
     val request = IniciarPickingLecturaRequest(
         usuario = Sesion.usuario
@@ -130,6 +132,12 @@ fun LecturaPickingScreen(
     var showDialogItem     by remember { mutableStateOf(false) }
     var showDialogCantidad by remember { mutableStateOf(false) }
     var showDialogSerie    by remember { mutableStateOf(false) }
+    var mostrarDialogoSiguienteUbicacion by remember {
+        mutableStateOf(false)
+    }
+    var mensajeSiguienteUbicacion by remember {
+        mutableStateOf("")
+    }
 
     val estiloTextoRojo = TextStyle(
         fontSize = 16.sp,
@@ -430,12 +438,23 @@ fun LecturaPickingScreen(
 
                                                 } else {
 
-                                                    val siguiente =
-                                                        respuesta.siguienteDetalle
+                                                    /* AQUI SEGUIMOS*/
+
+                                                    val siguiente = respuesta.siguienteDetalle
 
                                                     if (siguiente != null) {
 
                                                         CantidadEscaneada = ""
+
+                                                        mensajeError2 =
+                                                            "Ubicación completada.\n\n" +
+                                                                    "Pasando a la siguiente ubicación..."
+
+                                                        showDialogCantidad = true
+
+                                                        delay(1500)
+
+                                                        showDialogCantidad = false
 
                                                         navController.navigate(
                                                             "detalleUbicacionPicking/" +
@@ -652,6 +671,8 @@ fun LecturaPickingScreen(
         }
     }
 
+
+
     suspend fun validarUbicacionOrigen() {
 
         keyboardController?.hide()
@@ -811,7 +832,7 @@ fun LecturaPickingScreen(
                         ) {
 
                             Text(
-                                text = "N° PICKING",
+                                text = "NUMERO",
                                 color = Color.White,
                                 fontSize = 16.sp
                             )
@@ -865,7 +886,7 @@ fun LecturaPickingScreen(
                             )
 
                             Text(
-                                text = binCode,
+                                text = barCode,
                                 color = Color.White,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 16.sp
@@ -907,17 +928,16 @@ fun LecturaPickingScreen(
                         ) {
 
                             Text(
-                                text = "DETALLE ARTÍCULOS",
+                                text = "DETALLE ARTICULO",
                                 color = Color.White,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 16.sp
+                                fontSize = 14.sp
                             )
 
                             Text(
-                                text = "Item: ${itemCode.trim()}",
-                                color = Color.Red,
+                                text = "${itemCode.trim()}",
+                                color = Color.White,
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 16.sp
+                                fontSize = 18.sp
                             )
                         }
                     }
@@ -1095,12 +1115,13 @@ fun LecturaPickingScreen(
                     onValueChange = { newText ->
 
                         text = newText
-/*
-                        lecturaItemJob?.cancel()
 
-                        lecturaItemJob =
+                        if (newText.length < 20) {
+                            modoManual = true
+                            return@OutlinedTextField
+                        }
 
- */
+
 
                             coroutineScope.launch {
 
@@ -1158,13 +1179,17 @@ fun LecturaPickingScreen(
                                 extractedText =
                                     newText.substring(0, 20).trim()
 
+                                Log.d(
+                                    "*MAKITA*",
+                                    "LARGO DE extractedText: $extractedText"
+                                )
 
                                 //ACA VALIDANDO ITEM IGUAL A LO SCANEADO
 
                                 if (extractedText.trim() != itemCode.trim()) {
 
                                     mensajeError2 =
-                                        "Item incorrecto ${extractedText.trim()}. Escanee el item indicado en el picking ${itemCode.trim()}"
+                                        "Item Distintos ${extractedText.trim()}. Escanee el item indicado en el picking ${itemCode.trim()}"
 
                                     text = ""
                                     extractedText = ""
@@ -1319,7 +1344,7 @@ fun LecturaPickingScreen(
                                         }
 
 
-                                        if (newText.length >= 52) {
+                                        if (newText.length >= 50) {
 
                                             keyboardController?.hide()
 
@@ -1667,8 +1692,13 @@ fun LecturaPickingScreen(
 
                                 if (itemManual.uppercase() != itemCode.trim().uppercase()) {
 
+                                    Log.d(
+                                        "*MAKITA*PICKING*",
+                                        "ITEM CORRECTO MANUAL = $extractedText  Larrgho ${itemManual.length}"
+                                    )
+
                                     mensajeError2 =
-                                        "Item incorrecto ${itemManual.uppercase()}. Escanee el item indicado en el picking ${itemCode.trim()}"
+                                        "Item incorrecto XX ${itemManual.uppercase()}. Escanee el item indicado en el picking ${itemCode.trim()}"
 
                                     text = ""
                                     extractedText = ""
@@ -1911,6 +1941,8 @@ fun LecturaPickingScreen(
                         }
                     )
                 }
+
+
 
                 if (showDialogSerie) {
                     mostrarDialogo6(

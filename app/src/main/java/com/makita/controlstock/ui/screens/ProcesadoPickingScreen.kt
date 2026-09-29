@@ -461,7 +461,7 @@ fun ProcesadoPickingScreen(
                         ) {
 
                             Text(
-                                text = "DETALLE ARTICULOSX",
+                                text = "DETALLE ARTICULOS",
                                 color = Color.White,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 15.sp
@@ -746,7 +746,7 @@ fun ProcesadoPickingScreen(
             if (showDialog) {
 
                 mostrarDialogo4(
-                    titulo = "Error",
+                    titulo = "Aviso!",
                     mensaje = mensajeError2,
                     onDismiss = {
                         showDialog = false

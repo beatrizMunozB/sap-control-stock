@@ -338,7 +338,8 @@ fun PickingSolicitudScreen(usuario: String, navController: NavController) {
 
 
     Surface(
-        modifier = Modifier.fillMaxSize()
+        modifier = Modifier.fillMaxSize(),
+        color = Color(0xFFF2F2F2)
     ) {
 
         val solicitudesFiltradas = solicitudes.filter {
@@ -386,9 +387,18 @@ fun PickingSolicitudScreen(usuario: String, navController: NavController) {
                         text = "PICKING",
                         color = Color.White,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp,
+                        fontSize = 22.sp,
                         modifier = Modifier.weight(1f)
                     )
+
+                    Text(
+                        text = "Asignados: ${solicitudes.size}",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp,
+                        modifier = Modifier.padding(end = 12.dp)
+                    )
+
 
                     IconButton(
                         onClick = {
@@ -419,7 +429,7 @@ fun PickingSolicitudScreen(usuario: String, navController: NavController) {
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             Column(
                 modifier = Modifier
@@ -446,7 +456,7 @@ fun PickingSolicitudScreen(usuario: String, navController: NavController) {
                     },
 
                     label = {
-                        Text("N° Picking")
+                        Text("Buscador de Picking")
                     },
 
                     modifier = Modifier
@@ -494,7 +504,11 @@ fun PickingSolicitudScreen(usuario: String, navController: NavController) {
 
                     LazyColumn(
                         state = lazyListState,
-                        modifier = Modifier.fillMaxSize()
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(
+                            top = 4.dp,
+                            bottom = 80.dp
+                        )
                     ) {
 
                         items(solicitudesFiltradas) { solicitud ->
@@ -502,17 +516,16 @@ fun PickingSolicitudScreen(usuario: String, navController: NavController) {
                             Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(vertical = 4.dp)
+                                    .padding(vertical = 3.dp)
                                     .clickable {
-
                                         navController.navigate(
                                             "detallePicking/${solicitud.AbsEntry}"
                                         )
                                     }
                                     .border(
-                                        width = 2.dp,
-                                        color = Color(0xFF1976D2),
-                                        shape = RoundedCornerShape(12.dp)
+                                        width = 1.dp,
+                                        color = Color(0xFFBDBDBD),
+                                        shape = RectangleShape
                                     ),
 
                                 colors = CardDefaults.cardColors(
@@ -520,14 +533,14 @@ fun PickingSolicitudScreen(usuario: String, navController: NavController) {
                                 ),
 
                                 elevation = CardDefaults.cardElevation(
-                                    defaultElevation = 4.dp
+                                    defaultElevation = 1.dp
                                 ),
 
-                                shape = RoundedCornerShape(12.dp)
+                                shape = RectangleShape
                             ) {
 
                                 Column(
-                                    modifier = Modifier.padding(12.dp)
+                                    modifier = Modifier.fillMaxWidth()
                                 ) {
 
                                     val fechaFormateada = try {
@@ -543,33 +556,58 @@ fun PickingSolicitudScreen(usuario: String, navController: NavController) {
                                         solicitud.PickDate
                                     }
 
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth()
+
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .background(Color(0xFFE0E0E0))
+                                            .padding(
+                                                horizontal = 8.dp,
+                                                vertical = 4.dp
+                                            )
                                     ) {
-
                                         Text(
-                                            text = "Picking N° ${solicitud.AbsEntry}",
-                                            modifier = Modifier.weight(1f),
+                                            text = "N° Picking #${solicitud.AbsEntry}",
                                             fontWeight = FontWeight.Bold,
-                                            style = MaterialTheme.typography.titleMedium
-                                        )
-
-                                        Text(
-                                            text = fechaFormateada,
-                                            modifier = Modifier.weight(1f)
+                                            fontSize = 15.sp
                                         )
                                     }
 
-                                    Spacer(modifier = Modifier.height(6.dp))
 
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth()
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(
+                                                horizontal = 8.dp,
+                                                vertical = 6.dp
+                                            )
                                     ) {
 
-                                        Text(
-                                            text = "Comentarios: ${solicitud.Remarks ?: ""}",
+                                        Row(
                                             modifier = Modifier.fillMaxWidth()
-                                        )
+                                        ) {
+
+                                            Text(
+                                                text = "Fecha picking: $fechaFormateada",
+                                                modifier = Modifier.weight(1f),
+                                                fontSize = 15.sp
+                                            )
+                                        }
+
+                                        Spacer(modifier = Modifier.height(6.dp))
+
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+
+                                            Text(
+                                                text = "Comentarios: ${solicitud.Remarks ?: ""}",
+                                                modifier = Modifier.fillMaxWidth(),
+                                                fontSize = 15.sp
+                                            )
+                                        }
+
+
                                     }
                                 }
                             }
