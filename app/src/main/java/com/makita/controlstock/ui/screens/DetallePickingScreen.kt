@@ -36,6 +36,7 @@ import com.makita.controlstock.data.network.PickingDetalleResponse
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.RectangleShape
+import kotlin.math.roundToInt
 
 // ESTE ES EL NUEVI CON LAS UBICACIONES
 
@@ -146,10 +147,16 @@ fun DetallePickingScreen(
 
                     val BinAbs = item.BinAbs
 
+                    val PickEntry = item.PickEntry
+
                     val BarCode = item.BarCode
 
                     val cantidadBin =
-                        item.CantidadBin?.toInt() ?: 0
+                        item.CantidadLiberada
+                            ?.replace(",", ".")
+                            ?.toDoubleOrNull()
+                            ?.roundToInt()
+                            ?: 0
 
                     val cantidadCapturada =
                         item.CantidadCapturada?.toInt() ?: 0
@@ -190,8 +197,8 @@ fun DetallePickingScreen(
                                 navController.navigate(
                                     "detalleUbicacionPicking/" +
                                             "${AbsEntry}/" +
-                                            "${BinAbs}"
-
+                                            "${BinAbs}/" +
+                                            "${PickEntry}"
                                 )
                             },
                         elevation = CardDefaults.cardElevation(

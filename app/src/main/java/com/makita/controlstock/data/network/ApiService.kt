@@ -10,7 +10,7 @@ import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.Path
 import okhttp3.ResponseBody
-
+import retrofit2.http.Query
 
 
 data class ItemMovimiento(
@@ -119,30 +119,24 @@ data class SolicitudTransferenciaRequest(
 
 
 data class UbicacionResponse(
-
     @SerializedName("Ubicacion")
     var ubicacion: String,
-
     @SerializedName("Item")
     var item: String,
-
     @SerializedName("Descripcion")
     var descripcion: String,
-
     @SerializedName("PrimeraUbicacion")
     var primeraUbicacion: String,
-
     @SerializedName("UbicacionStandar")
     var ubicacionStandar: String,
-
     @SerializedName("Bodega")
     var bodega: String,
-
     @SerializedName("Cantidad")
     var cantidad: String,
-
     @SerializedName("Estado")
-    var estado: String
+    var estado: String,
+    @SerializedName("BarCode")
+    var BarCode: String
 )
 
 
@@ -349,8 +343,8 @@ data class PickingDetalleUbicacionResponse(
     val ItmsGrpCod : String?,
     val ItmsGrpNam : String?,
     val WhsCode : String?,
-    val CantidadLiberada : String,
-    val CantidadPickeada : String?,
+    val CantidadLiberada : Int?,
+    val CantidadPickeada : Int?,
     val BinAbs : String?,
     val BinCode : String?,
     val CantidadBin :   Double?,
@@ -358,7 +352,7 @@ data class PickingDetalleUbicacionResponse(
     val OrderEntry : String?,
     val OrderLine : String?,
     val BaseObject : String?,
-    val CantidadCapturada: Double?,
+    val CantidadCapturada: Int?,
     val BarCode : String?
 )
 
@@ -631,7 +625,8 @@ data class SiguienteDetalleResponse(
     val BinCode: String?,
     val CantidadLiberada: Int,
     val CantidadCapturada: Int,
-    val Estado: String?
+    val Estado: String?,
+    val PickEntry: Int?
 )
 
 
@@ -791,9 +786,49 @@ data class UsuarioSap(
 )
 
 
+/* PARA ORDENES DE COMPRA*/
+
+data class OrdenCompraResponse(
+    val OC_DocEntry: Int,
+    val OC_DocNum: Int,
+    val OC_Fecha: String?,
+    val Proveedor: String?,
+    val NombreProveedor: String?
+)
+
+data class OrdenesCompraResponse(
+    val success: Boolean,
+    val data: List<OrdenCompraResponse>?
+)
+
+data class DetalleOrdenCompraResponse(
+    val OC_Linea: Int,
+    val ItemCode: String?,
+    val Dscription: String?,
+    val CantidadOC: Double,
+    val PendienteOC: Double,
+    val Bodega: String?
+)
+
+data class DetalleOrdenCompraApiResponse(
+    val success: Boolean,
+    val data: List<DetalleOrdenCompraResponse>?
+)
+
+
 interface ApiService
 {
 
+    @GET("api/obtenerOrdenesCompra")
+    suspend fun obtenerOrdenesCompra(
+        @Query("numeroOC") numeroOC: String,
+        @Query("socioNegocio") socioNegocio: String
+    ): OrdenesCompraResponse
+
+    @GET("api/obtenerDetalleOrdenCompra")
+    suspend fun obtenerDetalleOrdenCompra(
+        @Query("docEntry") docEntry: Int
+    ): DetalleOrdenCompraApiResponse
 
     @POST("api/login-sap")
     suspend fun loginSAP(
@@ -962,12 +997,12 @@ interface ApiService
     ): ListaPickingDetalleResponse
 
 
-    @GET("api/obtener-ubicacion-picking/{AbsEntry}/{BinAbs}")
+    @GET("api/obtener-ubicacion-picking/{AbsEntry}/{BinAbs}/{PickEntry}")
     suspend fun obtenerUbicacionPickingDetalle(
         @Path("AbsEntry") AbsEntry: Int,
         @Path("BinAbs") BinAbs: Int,
+        @Path("PickEntry") PickEntry: Int,
     ): ListaPickingDetalleUbicacionResponse
-
 
 
     @GET("api/traslado-solicitud-detalle/{docEntry}")
@@ -1058,7 +1093,6 @@ interface ApiService
     suspend fun cerrarPicking(
         @Path("item") idCabecera: Int
     ): CerrarPickingResponse
-
 
 
 

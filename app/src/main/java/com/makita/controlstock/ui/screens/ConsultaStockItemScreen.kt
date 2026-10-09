@@ -2,6 +2,7 @@ package com.makita.controlstock.ui.screens
 
 import android.util.Log
 import android.widget.Toast
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -45,6 +46,7 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -163,12 +165,7 @@ fun ConsultaStockItemScreen(navController: NavController) {
                     "VALIDACION: ${apiResponse.data}"
                 )
 
-                /*
-                 * Guardamos la respuesta.
-                 *
-                 * response usa remember y NO rememberSaveable
-                 * porque contiene una lista de objetos complejos.
-                 */
+
                 response =
                     apiResponse.data
 
@@ -249,19 +246,8 @@ fun ConsultaStockItemScreen(navController: NavController) {
 
                     ubicacionActual = ""
 
-                    /*
-                     * Por ahora NO abrimos el diálogo
-                     * porque estamos aislando el problema.
-                     *
-                     * Si quieres volver a mostrarlo,
-                     * puedes descomentar esta línea.
-                     */
-                    // mostrarDialogoUbicacionNoExiste = true
 
-                    Log.d(
-                        "*MAKITA*",
-                        "FIN DEL IF"
-                    )
+
 
                 } else {
 
@@ -343,11 +329,9 @@ fun ConsultaStockItemScreen(navController: NavController) {
             )
         }
 
-
         Spacer(
-            modifier = Modifier.height(24.dp)
+            modifier = Modifier.height(18.dp)
         )
-
 
         LaunchedEffect(Unit) {
 
@@ -477,7 +461,6 @@ fun ConsultaStockItemScreen(navController: NavController) {
             modifier = Modifier.height(16.dp)
         )
 
-
         LazyColumn {
 
             items(response) { item ->
@@ -495,73 +478,153 @@ fun ConsultaStockItemScreen(navController: NavController) {
                 ) {
 
                     Column(
-                        modifier =
-                            Modifier.padding(16.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
                     ) {
 
-                        Text(
-                            text =
-                                "Item: ${item.item}",
-                            fontWeight =
-                                FontWeight.Bold,
-                            fontSize =
-                                18.sp
-                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "Item",
+                                fontWeight = FontWeight.Bold
+                            )
 
-                        Spacer(
-                            modifier =
-                                Modifier.height(4.dp)
-                        )
+                            Text(
+                                text = item.item ?: "",
+                                fontWeight = FontWeight.Bold,
+                                textAlign = TextAlign.Left
+                            )
+                        }
 
-                        Text(
-                            text =
-                                "Descripción       : ${item.descripcion}"
-                        )
+                        Spacer(modifier = Modifier.height(8.dp))
 
-                        Text(
-                            text =
-                                "Ubicación         : ${item.ubicacion}"
-                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "Nombre",
+                                fontWeight = FontWeight.Bold
+                            )
 
-                        Text(
-                            text =
-                                "Bodega            : ${item.bodega}"
-                        )
+                            Text(
+                                text = item.descripcion ?: "",
+                                modifier = Modifier.weight(1f),
+                                textAlign = TextAlign.End
+                            )
+                        }
 
-                        /*
-                         * IMPORTANTE:
-                         *
-                         * El backend entrega cantidades como:
-                         *
-                         * "1.000000"
-                         * "4.000000"
-                         * "20.000000"
-                         *
-                         * Por eso NO usamos:
-                         *
-                         * item.cantidad.toInt()
-                         *
-                         * porque eso provoca NumberFormatException.
-                         */
-                        Text(
-                            text =
-                                "Cantidad          : ${
-                                    item.cantidad
-                                        .toDoubleOrNull()
-                                        ?.toInt()
-                                        ?: 0
-                                }"
-                        )
+                        Spacer(modifier = Modifier.height(8.dp))
 
-                        Text(
-                            text =
-                                "Estado            : ${item.estado}"
-                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "Ubicacion",
+                                fontWeight = FontWeight.Bold
+                            )
 
-                        Text(
-                            text =
-                                "Ubicación estándar: ${item.ubicacionStandar}"
-                        )
+                            Text(
+                                text = item.ubicacion ?: "",
+                                modifier = Modifier.weight(1f),
+                                textAlign = TextAlign.End,
+                                color = Color.Red,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "Bodega",
+                                fontWeight = FontWeight.Bold
+                            )
+
+                            Text(
+                                text = item.bodega ?: "",
+                                textAlign = TextAlign.End
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "Cantidad",
+                                fontWeight = FontWeight.Bold
+                            )
+
+                            Text(
+                                text = item.cantidad.toDouble().toInt().toString(),
+                                textAlign = TextAlign.End,
+                                color = Color.Red,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "Estado",
+                                fontWeight = FontWeight.Bold
+                            )
+
+                            Text(
+                                text = item.estado ?: "",
+                                textAlign = TextAlign.End
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "Ubicacion estandar",
+                                fontWeight = FontWeight.Bold
+                            )
+
+                            Text(
+                                text = item.ubicacionStandar ?: "",
+                                textAlign = TextAlign.End
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "Primera ubicación",
+                                fontWeight = FontWeight.Bold
+                            )
+
+                            Text(
+                                text = item.primeraUbicacion ?: "",
+                                textAlign = TextAlign.End
+                            )
+                        }
+
+
                     }
                 }
             }

@@ -51,8 +51,18 @@ import androidx.compose.ui.platform.LocalContext
 fun DetalleUbicacionPickingScreen(
     AbsEntry: Int,
     BinAbs: Int,
+    PickEntry: Int,
     navController: NavHostController
 ) {
+
+
+    Log.d(
+        "*MAKITA*PICKING*",
+        "INGRESA DETALLE UBICACION PICKING AbsEntry=${AbsEntry} | " +
+                "BinAbs=${BinAbs} | " +
+                "Pick=$PickEntry} | "
+
+    )
 
     val context = LocalContext.current
 
@@ -68,14 +78,15 @@ fun DetalleUbicacionPickingScreen(
         mutableStateOf(false)
     }
 
-    LaunchedEffect(AbsEntry, BinAbs) {
+    LaunchedEffect(AbsEntry, BinAbs, PickEntry) {
 
         try {
 
             val resultado =
                 apiService.obtenerUbicacionPickingDetalle(
                     AbsEntry,
-                    BinAbs
+                    BinAbs,
+                    PickEntry
                 )
 
             detalle = resultado.data
@@ -135,8 +146,7 @@ fun DetalleUbicacionPickingScreen(
                     .toDoubleOrNull()
                     ?: 0.0
 
-            val cantidadCapturada =
-                it.CantidadCapturada ?: 0.0
+            val cantidadCapturada = it.CantidadCapturada ?: 0
 
             cantidadCapturada < cantidadLiberada
         }
@@ -351,9 +361,9 @@ fun DetalleUbicacionPickingScreen(
                         )
 
                         Text(
-                            text = "REVISAR ITEM PROCESADO",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 16.sp
+                            text = "REVISAR ITEMS CAPTURADOS",
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 15.sp
                         )
                     }
                 }
@@ -435,7 +445,7 @@ fun DetalleUbicacionPickingScreen(
                                 )
 
                                 Text(
-                                    text = "${it.CantidadBin?.roundToInt() ?: 0}",
+                                    text = "${it.CantidadLiberada ?: 0}",
                                     color = Color.White,
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 20.sp
@@ -478,7 +488,8 @@ fun DetalleUbicacionPickingScreen(
                                 val resultadoActualizado =
                                     apiService.obtenerUbicacionPickingDetalle(
                                         AbsEntry,
-                                        BinAbs
+                                        BinAbs,
+                                        PickEntry
                                     )
 
                                 detalle =
@@ -499,14 +510,10 @@ fun DetalleUbicacionPickingScreen(
                                     resultadoActualizado.data.firstOrNull {
 
                                         val cantidadLiberada =
-                                            it.CantidadLiberada
-                                                .toString()
-                                                .replace(",", ".")
-                                                .toDoubleOrNull()
-                                                ?: 0.0
+                                            it.CantidadLiberada ?: 0
 
                                         val cantidadCapturada =
-                                            it.CantidadCapturada ?: 0.0
+                                            it.CantidadCapturada ?: 0
 
                                         cantidadCapturada < cantidadLiberada
                                     }
@@ -545,7 +552,9 @@ fun DetalleUbicacionPickingScreen(
                                             "$BinAbs/" +
                                             "${itemActualizado.WhsCode}/" +
                                             "${itemActualizado.ItemCode}/" +
-                                            "${itemActualizado.BarCode}"
+                                            "${itemActualizado.BarCode}/" +
+                                            "${itemActualizado.CantidadLiberada}/" +
+                                            "${itemActualizado.PickEntry}"
 
                                 )
 

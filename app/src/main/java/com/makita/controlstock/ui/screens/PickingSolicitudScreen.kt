@@ -145,6 +145,7 @@ import com.makita.controlstock.data.network.SolicitudCabeceraResponse
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.makita.controlstock.session.Sesion
 
 
 @Composable
@@ -206,7 +207,12 @@ fun PickingSolicitudScreen(usuario: String, navController: NavController) {
 
             try {
 
-                val resultado = apiService.obtenerPickingSolicitud(usuario, "BOD01")
+
+                Log.d("MAKITA", "${Sesion.usuarioSap}")
+
+                Log.d("MAKITA", "${Sesion.bodega}")
+
+                val resultado = apiService.obtenerPickingSolicitud(Sesion.usuarioSap, Sesion.bodega)
 
                 Log.d("*MAKITA*", "RESPUESTA PICKING = $resultado")
                 Log.d("*MAKITA*", "CANTIDAD PICKING = ${resultado.data.size}")

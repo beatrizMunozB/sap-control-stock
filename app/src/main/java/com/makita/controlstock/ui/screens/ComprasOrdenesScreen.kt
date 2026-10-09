@@ -1,12 +1,375 @@
 package com.makita.controlstock.ui.screens
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.navigation.NavController
+import androidx.compose.runtime.mutableStateOf
+import androidx.navigation.NavHostController
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+
+import com.makita.controlstock.data.network.OrdenCompraResponse
+import com.makita.controlstock.data.network.RetrofitClient.apiService
+import androidx.compose.material3.Surface
+import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.clickable
+
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import android.util.Log
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.ui.graphics.RectangleShape
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+
+
+
 
 @Composable
 fun ComprasOrdenesScreen(
-    navController: NavController
+    navController: NavHostController
 ) {
 
-    Text("Pantalla ComprasOrdenes")
+    var numeroOC by remember {
+        mutableStateOf("")
+    }
+
+    var socioNegocio by remember {
+        mutableStateOf("")
+    }
+
+    var ordenes by remember {
+        mutableStateOf<List<OrdenCompraResponse>>(emptyList())
+    }
+
+    var mensajeError by remember {
+        mutableStateOf("")
+    }
+
+    var showDialog by remember {
+        mutableStateOf(false)
+    }
+
+    suspend fun buscarOrdenesCompra() {
+
+        try {
+
+            Log.d(
+                "*MAKITA*",
+                "Buscando OC - numeroOC=$numeroOC | socioNegocio=$socioNegocio"
+            )
+
+            val resultado = apiService.obtenerOrdenesCompra(
+                numeroOC = numeroOC.trim(),
+                socioNegocio = socioNegocio.trim()
+            )
+
+            if (resultado.success) {
+
+                ordenes = resultado.data ?: emptyList()
+
+                Log.d(
+                    "*MAKITA*",
+                    "Órdenes encontradas: ${ordenes.size}"
+                )
+
+                if (ordenes.isEmpty()) {
+
+                    mensajeError = "No se encontraron órdenes de compra"
+                    showDialog = true
+                }
+
+            } else {
+
+                ordenes = emptyList()
+
+                mensajeError =
+                    "No fue posible obtener las órdenes de compra"
+
+                showDialog = true
+            }
+
+        } catch (e: Exception) {
+
+            Log.e(
+                "*MAKITA*",
+                "Error obteniendo órdenes de compra",
+                e
+            )
+
+            mensajeError =
+                "Error al obtener las órdenes de compra: ${e.message}"
+
+            showDialog = true
+        }
+    }
+
+    /*
+     * CARGA INICIAL
+     */
+    LaunchedEffect(Unit) {
+        buscarOrdenesCompra()
+    }
+
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = Color(0xFFF2F2F2)
+    ) {
+
+        Column(
+            modifier = Modifier.fillMaxSize()
+        ) {
+
+            /*
+             * ENCABEZADO
+             */
+            ElevatedCard(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RectangleShape,
+                elevation = CardDefaults.elevatedCardElevation(
+                    defaultElevation = 8.dp
+                ),
+                colors = CardDefaults.elevatedCardColors(
+                    containerColor = Color(0xFF00695C)
+                )
+            ) {
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+
+                    IconButton(
+                        onClick = {
+                            navController.popBackStack()
+                        }
+                    ) {
+
+                        Icon(
+                            imageVector = Icons.Default.ArrowBack,
+                            contentDescription = null,
+                            tint = Color.White
+                        )
+                    }
+
+                    Text(
+                        text = "ORDENES DE COMPRA",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 22.sp,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+
+            Spacer(
+                modifier = Modifier.height(12.dp)
+            )
+
+            /*
+             * CONTENIDO
+             */
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp)
+            ) {
+
+                /*
+                 * FILTRO NUMERO OC
+                 */
+                OutlinedTextField(
+                    value = numeroOC,
+                    onValueChange = {
+                        numeroOC = it
+                    },
+                    label = {
+                        Text("Numero Orden de Compra")
+                    },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(
+                    modifier = Modifier.height(10.dp)
+                )
+
+                /*
+                 * FILTRO SOCIO DE NEGOCIO
+                 */
+                OutlinedTextField(
+                    value = socioNegocio,
+                    onValueChange = {
+                        socioNegocio = it.uppercase()
+                    },
+                    label = {
+                        Text("Socio de Negocio")
+                    },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(
+                    modifier = Modifier.height(12.dp)
+                )
+
+                /*
+                 * BOTON BUSCAR
+                 */
+                Button(
+                    onClick = {
+                        CoroutineScope(Dispatchers.Main).launch {
+                            buscarOrdenesCompra()
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(45.dp),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = null
+                    )
+
+                    Spacer(
+                        modifier = Modifier.width(6.dp)
+                    )
+
+                    Text("BUSCAR")
+                }
+
+                Spacer(
+                    modifier = Modifier.height(16.dp)
+                )
+
+                /*
+                 * LISTA DE ORDENES
+                 */
+                LazyColumn(
+                    modifier = Modifier.weight(1f)
+                ) {
+
+                    items(ordenes) { item ->
+
+                        ElevatedCard(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(
+                                    horizontal = 4.dp,
+                                    vertical = 4.dp
+                                )
+                                .clickable {
+
+                                    navController.navigate(
+                                        "detalleOrdenCompra/${item.OC_DocEntry}"
+                                    )
+                                },
+
+                            elevation = CardDefaults.elevatedCardElevation(
+                                defaultElevation = 5.dp
+                            ),
+
+                            colors = CardDefaults.elevatedCardColors(
+                                containerColor = Color.White
+                            )
+                        ) {
+
+                            Column(
+                                modifier = Modifier.padding(12.dp)
+                            ) {
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+
+                                    Text(
+                                        text = "OC: ${item.OC_DocNum}",
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.weight(1f)
+                                    )
+
+                                    Text(
+                                        text = item.OC_Fecha?.take(10) ?: "",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+
+                                Spacer(
+                                    modifier = Modifier.height(6.dp)
+                                )
+
+                                Text(
+                                    text = item.Proveedor ?: "",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+
+                                Text(
+                                    text = item.NombreProveedor ?: "",
+                                    fontSize = 14.sp
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /*
+     * DIALOGO
+     */
+    if (showDialog) {
+
+        mostrarDialogo20(
+            titulo = "Aviso!",
+            mensaje = mensajeError,
+            onDismiss = {
+                showDialog = false
+            }
+        )
+    }
 }
+
+@Composable
+fun mostrarDialogo20(
+    titulo: String,
+    mensaje: String,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(text = titulo) },
+        text = { Text(text = mensaje) },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Aceptar")
+            }
+        }
+    )
+}
+
+
+

@@ -292,7 +292,7 @@ fun TrasladosSalidaScreen(usuario: String) {
             CoroutineScope(Dispatchers.IO).launch {
                 try {
 
-                    // ubicacionOrigen ="I34C1"
+
 
                     Log.d("*MAKITA*",
                         "item=$itemActual | bodega=$bodegaOrigen | ubicacion=$ubicacionOrigen | cantidad=$cantidadActual"
@@ -439,7 +439,7 @@ fun TrasladosSalidaScreen(usuario: String) {
                     mostrarDialogoProductoNoExiste = false
                 },
                 title = {
-                    Text("Producto no existe")
+                    Text("Item no existe")
                 },
                 text = {
                     Text("El item ingresado no existe.")
@@ -598,7 +598,6 @@ fun TrasladosSalidaScreen(usuario: String) {
                     )
                 }
 
-                    ubicacionOrigen  = "I34C1"
 
                     Spacer(modifier = Modifier.height(8.dp))
 

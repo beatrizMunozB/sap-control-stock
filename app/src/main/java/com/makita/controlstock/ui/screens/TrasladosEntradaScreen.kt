@@ -139,7 +139,6 @@ import com.makita.controlstock.data.network.SalidaMercanciaResponse
 
 
 @Composable
-
 fun TrasladosEntradaScreen(usuario: String) {
 
     var bodegaOrigen by rememberSaveable { mutableStateOf("") }
@@ -219,8 +218,6 @@ fun TrasladosEntradaScreen(usuario: String) {
             try {
 
                 val resultado = apiService.obtenerEntradaMercanciasDiarias(usuario,bodegaOrigen)
-
-
                 Log.d("*MAKITA*", resultado.toString())
 
                 withContext(Dispatchers.Main) {
@@ -313,7 +310,6 @@ fun TrasladosEntradaScreen(usuario: String) {
                     //val cantidadRecibida  = apiResponseCant.first().cantidad
 
 
-
                     Log.d(
                         "*MAKITA*",
                         " cantidadRecibida=$cantidadRecibida | cantidadIngresada=$cantidadIngresada "
@@ -357,14 +353,10 @@ fun TrasladosEntradaScreen(usuario: String) {
         }
     }
 
-
     fun validarItem(itemIngresado: String) {
 
-
         val itemLimpio = itemIngresado.trim()
-
         Log.d("*MAKITA*", "ENTRO validarItem")
-
 
         if (itemLimpio.isEmpty()) {
             errorState = "Ingrese un item"
@@ -423,8 +415,6 @@ fun TrasladosEntradaScreen(usuario: String) {
                 }
             }
         }
-
-
 
     }
 
@@ -589,8 +579,6 @@ fun TrasladosEntradaScreen(usuario: String) {
                     modifier = Modifier.weight(1f)
                 )
             }
-
-            ubicacionOrigen  = "I34C1"
 
             Spacer(modifier = Modifier.height(8.dp))
 

@@ -5,6 +5,7 @@ import android.content.Context
 import android.graphics.Paint
 import android.os.Bundle
 import android.os.CancellationSignal
+import android.os.Environment
 import android.print.PrintAttributes
 import android.print.PrintDocumentAdapter
 import android.util.Log
@@ -55,21 +56,22 @@ import com.makita.controlstock.data.network.PickingDetalleUbicacionResponse
 import com.makita.controlstock.session.Sesion
 import kotlinx.coroutines.launch
 import android.print.PrintManager
-
 import android.os.ParcelFileDescriptor
 import android.print.PageRange
-
 import android.print.PrintDocumentInfo
 import android.print.pdf.PrintedPdfDocument
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import java.io.FileOutputStream
 import java.net.URL
 import java.net.HttpURLConnection
-
-
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
-
+import java.net.Socket
 
 
 @Composable
@@ -290,12 +292,17 @@ fun ProcesadoPickingScreen(
                     mensajeError8 =
                         "PICKING PROCESADO DE FORMA CORRECTA EN SAP"
 
-
+//AQUI
+                    imprimirPickingPrueba(
+                        context = context,
+                        idDocumento = idCabecera
+                    )
+                    /*
                     imprimirPicking(
                         context = context,
                         idDocumento =
                             respuestaCierre.idDocumento!!
-                    )
+                    )*/
 
 
                 } else {
@@ -504,177 +511,195 @@ fun ProcesadoPickingScreen(
                     Arrangement.spacedBy(8.dp)
             ) {
 
-                items(
+                itemsIndexed(
                     items = capturas
-                ) { captura ->
+                ) { index, captura ->
 
 
                     Card(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth(),
                         elevation = CardDefaults.cardElevation(
                             defaultElevation = 3.dp
                         )
                     ) {
 
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(12.dp),
-
-                            verticalAlignment = Alignment.Top
+                        Column(
+                            modifier = Modifier.fillMaxWidth()
                         ) {
 
-
                             // =========================================
-                            // COLUMNA 1
+                            // NOMBRE DEL ARTÍCULO
+                            // FRANJA GRIS - TODO EL ANCHO
                             // =========================================
+                            Text(
 
-                            Column(
+                                text = "${index + 1}. ${captura.ItemName?.take(35) ?: ""}",
                                 modifier = Modifier
-                                    .weight(1f)
-                                    .background(Color(0xFFFFF9C4))
-                                    .padding(12.dp)
+                                    .fillMaxWidth()
+                                    .background(Color(0xFFE0E0E0))
+                                    .padding(
+                                        horizontal = 12.dp,
+                                        vertical = 10.dp
+                                    ),
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold,
+                                textAlign = TextAlign.Center,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+
+                            // =========================================
+                            // CONTENIDO
+                            // =========================================
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(Color(0xFFFFF9C4)),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
 
-                                Text(
-                                    text = "Item: ${captura.ItemCode ?: ""}",
-                                    fontSize = 15.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-
-
-                                Spacer(
-                                    modifier = Modifier.height(8.dp)
-                                )
-
-
-                                Text(
-                                    text = "Serie: ${captura.numeroSerie ?: "-"}",
-                                    fontSize = 14.sp
-                                )
-
-
-                                Spacer(
-                                    modifier = Modifier.height(6.dp)
-                                )
-
-
-                                Text(
-                                    text = "Cantidad: ${captura.cantidad}",
-                                    fontSize = 15.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-
-
-                                Spacer(
-                                    modifier = Modifier.height(6.dp)
-                                )
-
-
-                                Text(
-                                    text = "Ubicacion: ${captura.barCode ?: "-"}",
-                                    fontSize = 14.sp
-                                )
-
-
-                                Text(
-                                    text = "",
-                                    color = Color.Red,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 14.sp
-                                )
-                            }
-
-
-                            // =========================================
-                            // COLUMNA 2
-                            // =========================================
-
-                            Column(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .background(Color(0xFFFFF9C4))
-                                    .padding(12.dp),
-
-                                horizontalAlignment =
-                                    Alignment.CenterHorizontally
-                            ) {
-
-                                Text(
-                                    text = "${captura.ItemName?.take(25) ?: ""}",
-                                    fontSize = 15.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-
-
-                                Spacer(
-                                    modifier = Modifier.height(20.dp)
-                                )
-
-
-                                IconButton(
-                                    onClick = {
-
-                                        CoroutineScope(
-                                            Dispatchers.Main
-                                        ).launch {
-
-                                            try {
-
-                                                val respuesta =
-                                                    apiService.eliminarPickingCaptura(
-                                                        captura.id
-                                                    )
-
-
-                                                if (respuesta.success) {
-
-                                                    capturas =
-                                                        capturas.filter {
-                                                            it.id != captura.id
-                                                        }
-
-
-                                                    mensajeError2 =
-                                                        respuesta.message
-
-                                                    showDialog = true
-
-                                                } else {
-
-                                                    mensajeError2 =
-                                                        respuesta.message
-
-                                                    showDialog = true
-                                                }
-
-                                            } catch (e: Exception) {
-
-                                                mensajeError2 =
-                                                    "Error eliminando captura"
-
-                                                showDialog = true
-                                            }
-                                        }
-                                    }
+                                // =========================================
+                                // COLUMNA IZQUIERDA
+                                // =========================================
+                                Column(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .padding(
+                                            start = 12.dp,
+                                            top = 12.dp,
+                                            bottom = 12.dp,
+                                            end = 8.dp
+                                        )
                                 ) {
 
-                                    Icon(
-                                        imageVector = Icons.Default.Delete,
-                                        contentDescription =
-                                            "Eliminar captura",
-                                        tint = Color.Red,
-                                        modifier = Modifier.size(40.dp)
+                                    Text(
+                                        text = "Item: ${captura.ItemCode ?: ""}",
+                                        fontSize = 15.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+
+                                    Spacer(
+                                        modifier = Modifier.height(8.dp)
+                                    )
+
+                                    Text(
+                                        text = buildAnnotatedString {
+                                            append("Serie: ")
+
+                                            withStyle(
+                                                style = SpanStyle(
+                                                    color = Color.Red,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                            ) {
+                                                append(captura.numeroSerie ?: "-")
+                                            }
+                                        },
+                                        fontSize = 14.sp
+                                    )
+
+                                    Spacer(
+                                        modifier = Modifier.height(6.dp)
+                                    )
+
+                                    Text(
+                                        text = "Cantidad: ${captura.cantidad}",
+                                        fontSize = 15.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+
+                                    Spacer(
+                                        modifier = Modifier.height(6.dp)
+                                    )
+
+                                    Text(
+                                        text = "Ubicacion: ${captura.barCode ?: "-"}",
+                                        fontSize = 14.sp
                                     )
                                 }
 
-
-                                Text(
-                                    text = "ELIMINAR",
-                                    color = Color.Red,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 14.sp
+                                // =========================================
+                                // SEPARADOR VERTICAL
+                                // =========================================
+                                Box(
+                                    modifier = Modifier
+                                        .width(1.dp)
+                                        .height(110.dp)
+                                        .background(Color.LightGray)
                                 )
+
+                                // =========================================
+                                // COLUMNA DERECHA
+                                // ELIMINAR
+                                // =========================================
+                                Column(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .padding(12.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+
+                                    IconButton(
+                                        onClick = {
+                                            CoroutineScope(
+                                                Dispatchers.Main
+                                            ).launch {
+
+                                                try {
+
+                                                    val respuesta =
+                                                        apiService.eliminarPickingCaptura(
+                                                            captura.id
+                                                        )
+
+                                                    if (respuesta.success) {
+
+                                                        capturas =
+                                                            capturas.filter {
+                                                                it.id != captura.id
+                                                            }
+
+                                                        mensajeError2 =
+                                                            respuesta.message
+
+                                                        showDialog = true
+
+                                                    } else {
+
+                                                        mensajeError2 =
+                                                            respuesta.message
+
+                                                        showDialog = true
+                                                    }
+
+                                                } catch (e: Exception) {
+
+                                                    mensajeError2 =
+                                                        "Error eliminando captura"
+
+                                                    showDialog = true
+                                                }
+                                            }
+                                        }
+                                    ) {
+
+                                        Icon(
+                                            imageVector = Icons.Default.Delete,
+                                            contentDescription = "Eliminar captura",
+                                            tint = Color.Red,
+                                            modifier = Modifier.size(45.dp)
+                                        )
+                                    }
+
+                                    Text(
+                                        text = "ELIMINAR",
+                                        color = Color.Red,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 14.sp
+                                    )
+                                }
                             }
                         }
                     }
@@ -693,23 +718,39 @@ fun ProcesadoPickingScreen(
 
             Button(
                 onClick = {
+                    Log.d(
+                        "*MAKITA*",
+                        "CLICK PROBAR IMPRESORA"
+                    )
+                    imprimirPickingPrueba(
+                        context = context,
+                        idDocumento = 26
+                    )
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp)
+                    .height(50.dp),
+                shape = RectangleShape
+            ) {
+                Text(
+                    text = "PROBAR IMPRESORA",
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+
+            Button(
+                onClick = {
                     procesarEnvioASAP(false)
                 },
-
-
                 enabled = puedeEnviarASAP,
-
-
                 modifier = Modifier
                     .fillMaxWidth()
                     .navigationBarsPadding()
                     .padding(horizontal = 8.dp)
                     .height(55.dp),
-
-
                 shape = RectangleShape,
-
-
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color(0xFF1976D2),
                     contentColor = Color.White,
@@ -737,6 +778,11 @@ fun ProcesadoPickingScreen(
                     fontSize = 18.sp
                 )
             }
+
+
+
+
+
 
 
             // =================================================
@@ -794,7 +840,7 @@ fun ProcesadoPickingScreen(
         }
     }
 }
-
+/*
 private fun imprimirPicking(
     context: Context,
     idDocumento: Int
@@ -959,6 +1005,257 @@ private fun imprimirPicking(
         }
     }
 }
+*/
+
+private fun imprimirPickingPrueba(
+    context: Context,
+    idDocumento: Int
+) {
+    Log.d(
+        "*MAKITA*",
+        "Ingresa a imprimirPickingPrueba $idDocumento"
+    )
+
+    CoroutineScope(Dispatchers.IO).launch {
+        try {
+
+            // Obtener PDF
+            val respuesta = apiService.obtenerPDFPicking(idDocumento)
+            val pdfBytes = respuesta.bytes()
+
+            if (pdfBytes.isEmpty()) {
+                throw Exception("El PDF recibido está vacío")
+            }
+
+            Log.d(
+                "*MAKITA*",
+                "PDF recibido: ${pdfBytes.size} bytes"
+            )
+
+            // Impresora Canon ADMINISTRACION
+            val ipImpresora = "172.16.128.20"
+            val puerto = 9100
+
+            // Impresora Canon PICKING
+            //val ipImpresora = "172.16.128.27"
+            //val puerto = 9100
+
+            // Impresora Canon HERRAMIENTAS
+            //val ipImpresora = "172.16.128.28"
+            //val puerto = 9100
+
+
+            Log.d(
+                "*MAKITA*",
+                "Enviando PDF por RAW a $ipImpresora:$puerto"
+            )
+
+            val socket = java.net.Socket(
+                ipImpresora,
+                puerto
+            )
+
+            socket.soTimeout = 30000
+
+            val salida = socket.getOutputStream()
+
+            salida.write(pdfBytes)
+            salida.flush()
+
+            socket.close()
+
+            Log.d(
+                "*MAKITA*",
+                "PDF enviado correctamente por RAW 9100"
+            )
+
+            withContext(Dispatchers.Main) {
+                Toast.makeText(
+                    context,
+                    "PDF enviado a impresora",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+
+        } catch (e: Exception) {
+
+            Log.e(
+                "*MAKITA*",
+                "ERROR IMPRESORA PDF RAW",
+                e
+            )
+
+            withContext(Dispatchers.Main) {
+                Toast.makeText(
+                    context,
+                    "Error impresión: ${e.message}",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+    }
+}
+
+private fun imprimirPicking(
+    context: Context,
+    idDocumento: Int
+) {
+
+    val ipImpresora = "172.16.128.20"
+    val puerto = 8000
+
+    CoroutineScope(Dispatchers.IO).launch {
+
+        try {
+
+            // =====================================================
+            // 1. OBTENER PDF DESDE EL BACKEND
+            // =====================================================
+
+            val respuesta =
+                apiService.obtenerPDFPicking(
+                    idDocumento
+                )
+
+            val pdfBytes =
+                respuesta.bytes()
+
+            val archivoPDF = File(
+                Environment.getExternalStoragePublicDirectory(
+                    Environment.DIRECTORY_DOWNLOADS
+                ),
+                "Picking_Prueba.pdf"
+            )
+
+            archivoPDF.writeBytes(pdfBytes)
+
+            Log.d(
+                "*MAKITA*",
+                "PDF guardado en: ${archivoPDF.absolutePath}"
+            )
+
+            Log.d(
+                "MAKITA",
+                "PDF RECIBIDO EN ANDROID: ${pdfBytes.size} bytes"
+            )
+
+            if (pdfBytes.isEmpty()) {
+
+                throw Exception(
+                    "El PDF recibido está vacío"
+                )
+            }
+
+            Log.d(
+                "MAKITA",
+                "PDF recibido: ${pdfBytes.size} bytes"
+            )
+
+
+            // =====================================================
+            // 2. ENVIAR PDF DIRECTAMENTE A LA IMPRESORA
+            // =====================================================
+
+            Log.d(
+                "MAKITA",
+                "CONECTANDO A IMPRESORA: http://172.16.128.20:8000/"
+            )
+
+            val url =
+                URL(
+                    "http://$ipImpresora:$puerto/"
+                )
+
+            Log.d(
+                "MAKITA",
+                "Enviando PDF a: $url"
+            )
+
+            val connection =
+                url.openConnection() as HttpURLConnection
+
+            connection.requestMethod = "POST"
+            connection.doOutput = true
+
+            connection.connectTimeout = 10000
+            connection.readTimeout = 30000
+
+            connection.setRequestProperty(
+                "Content-Type",
+                "application/pdf"
+            )
+
+            connection.setRequestProperty(
+                "Content-Length",
+                pdfBytes.size.toString()
+            )
+
+            connection.outputStream.use { output ->
+
+                output.write(pdfBytes)
+                output.flush()
+            }
+
+
+            // =====================================================
+            // 3. RESPUESTA DE LA IMPRESORA
+            // =====================================================
+
+            val responseCode =
+                connection.responseCode
+
+            Log.d(
+                "MAKITA",
+                "RESPUESTA IMPRESORA: HTTP $responseCode"
+            )
+
+            connection.disconnect()
+
+
+            // =====================================================
+            // 4. RESULTADO
+            // =====================================================
+
+            withContext(Dispatchers.Main) {
+
+                if (responseCode in 200..299) {
+
+                    Toast.makeText(
+                        context,
+                        "PDF enviado a impresora FINANZAS",
+                        Toast.LENGTH_LONG
+                    ).show()
+
+                } else {
+
+                    Toast.makeText(
+                        context,
+                        "Impresora respondió HTTP $responseCode",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
+
+        } catch (e: Exception) {
+
+            Log.e(
+                "IMPRESION",
+                "ERROR enviando PDF a impresora",
+                e
+            )
+
+            withContext(Dispatchers.Main) {
+
+                Toast.makeText(
+                    context,
+                    "Error impresión: ${e.message}",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+    }
+}
+
 
 @Composable
 fun mostrarDialogo4(

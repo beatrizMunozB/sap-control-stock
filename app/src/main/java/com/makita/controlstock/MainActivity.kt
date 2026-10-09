@@ -147,6 +147,7 @@ import com.makita.controlstock.ui.screens.ConsultaPedidoClienteScreen
 import com.makita.controlstock.ui.screens.ProcesadoPickingScreen
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.style.TextAlign
+import com.makita.controlstock.ui.screens.DetalleOrdenCompraScreen
 
 
 val fechaHoy = LocalDate.now()
@@ -286,6 +287,25 @@ fun AppNavigation() {
             )
         }
 
+
+        composable(
+            route = "detalleOrdenCompra/{docEntry}",
+            arguments = listOf(
+                navArgument("docEntry") {
+                    type = NavType.IntType
+                }
+            )
+        ) { backStackEntry ->
+
+            val docEntry =
+                backStackEntry.arguments?.getInt("docEntry") ?: 0
+
+            DetalleOrdenCompraScreen(
+                navController = navController,
+                docEntry = docEntry
+            )
+        }
+
         /*
         composable("picking_recolecta") {
             PickingRecolectaScreen(navController)
@@ -330,6 +350,7 @@ fun AppNavigation() {
 
         composable("compras_ordenes") {
             ComprasOrdenesScreen(navController)
+
         }
 
         composable("compras_reserva") {
@@ -421,27 +442,31 @@ fun AppNavigation() {
 
 
         composable(
-            route = "detalleUbicacionPicking/{AbsEntry}/{BinAbs}",
+            route = "detalleUbicacionPicking/{AbsEntry}/{BinAbs}/{PickEntry}",
             arguments = listOf(
                 navArgument("AbsEntry") { type = NavType.IntType },
-                navArgument("BinAbs") { type = NavType.IntType }
+                navArgument("BinAbs") { type = NavType.IntType },
+                navArgument("PickEntry") { type = NavType.IntType },
             )
         ) { backStackEntry ->
 
             val absEntry = backStackEntry.arguments?.getInt("AbsEntry") ?: 0
             val binAbs = backStackEntry.arguments?.getInt("BinAbs") ?: 0
+            val pickEntry = backStackEntry.arguments?.getInt("PickEntry") ?: 0
+
 
 
             DetalleUbicacionPickingScreen(
                 AbsEntry = absEntry,
                 BinAbs = binAbs,
+                PickEntry = pickEntry,
                 navController = navController
             )
         }
 
 
         composable(
-            route = "lecturaPicking/{idCabecera}/{idDetalle}/{absEntry}/{binCode}/{binAbs}/{whsCode}/{ItemCode}/{barCode}",
+            route = "lecturaPicking/{idCabecera}/{idDetalle}/{absEntry}/{binCode}/{binAbs}/{whsCode}/{ItemCode}/{barCode}/{CantidadLiberada}/{pickEntry}",
             arguments = listOf(
                 navArgument("idCabecera") { type = NavType.IntType },
                 navArgument("idDetalle") { type = NavType.IntType },
@@ -450,7 +475,9 @@ fun AppNavigation() {
                 navArgument("binAbs") { type = NavType.IntType },
                 navArgument("whsCode") { type = NavType.StringType },
                 navArgument("ItemCode") { type = NavType.StringType },
-                navArgument("barCode") { type = NavType.StringType }
+                navArgument("barCode") { type = NavType.StringType },
+                navArgument("CantidadLiberada") { type = NavType.IntType },
+                navArgument("pickEntry") { type = NavType.IntType }
             )
         ) { backStackEntry ->
 
@@ -462,6 +489,8 @@ fun AppNavigation() {
             val whsCode = backStackEntry.arguments?.getString("whsCode") ?: ""
             val itemCode = backStackEntry.arguments?.getString("ItemCode") ?: ""
             val barCode = backStackEntry.arguments?.getString("barCode") ?: ""
+            val CantidadLiberada = backStackEntry.arguments?.getInt("CantidadLiberada") ?: 0
+            val pickEntry = backStackEntry.arguments?.getInt("pickEntry") ?: 0
 
             LecturaPickingScreen(
                 idCabecera = idCabecera,
@@ -472,6 +501,8 @@ fun AppNavigation() {
                 whsCode = whsCode,
                 itemCode = itemCode,
                 barCode = barCode,
+                CantidadLiberada = CantidadLiberada,
+                pickEntry = pickEntry,
                 navController = navController
             )
         }
@@ -985,7 +1016,7 @@ fun PantallaLogin(navController: NavController) {
                 initialValue = 0f,
                 targetValue = 360f,
                 animationSpec = infiniteRepeatable(
-                    animation = tween(1000, easing = LinearEasing),
+                    animation = tween(900, easing = LinearEasing),
                     repeatMode = RepeatMode.Restart
                 ),
                 label = ""
@@ -2060,9 +2091,6 @@ fun TerceraScreen(usuario: String) {
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                ubicacionOrigen  = "I34A1"
-                ubicacionDestino = "I34C1"
-
                 Spacer(modifier = Modifier.height(8.dp))
 
                 OutlinedTextField(
@@ -2115,7 +2143,7 @@ fun TerceraScreen(usuario: String) {
                                     showErrorDialogUBI = true
                                 }
                             } catch (e: Exception) {
-                                errorMessageUBI = "Error validando ubicación de origen"
+                                errorMessageUBI = "Error validando ubicacion de origen"
                                 showErrorDialogUBI = true
                             }
                         }
@@ -2231,8 +2259,6 @@ fun TerceraScreen(usuario: String) {
 
 
             if (modoLectura == ModoLectura.ARTICULOS) {
-
-                itemActual = "DLM462Z-1"
 
                 OutlinedTextField(
                     value = itemActual,
@@ -2401,7 +2427,6 @@ fun TerceraScreen(usuario: String) {
 
 
 
-
                     // LIMPIAR
                     Button(
                         onClick = {
@@ -2468,7 +2493,7 @@ fun TerceraScreen(usuario: String) {
 
                                         withContext(Dispatchers.Main) {
                                             mensajeTransferencia =
-                                                "Ubicación origen no válida"
+                                                "Ubicación origen no valida"
                                             mostrarDialogoTransferencia = true
                                         }
 
@@ -2487,8 +2512,7 @@ fun TerceraScreen(usuario: String) {
 
                                         withContext(Dispatchers.Main) {
 
-                                            mensajeTransferencia =
-                                                "Ubicación destino no válida"
+                                            mensajeTransferencia = "Ubicacion destino no corresponde"
 
                                             mostrarDialogoTransferencia = true
                                         }
@@ -2567,7 +2591,7 @@ fun TerceraScreen(usuario: String) {
                         )
                     ) {
                         Text(
-                            "PROCESAR A SAP",
+                            "ENVIAR A SAP",
                             fontWeight = FontWeight.Bold,
                             fontSize = 11.sp
                         )

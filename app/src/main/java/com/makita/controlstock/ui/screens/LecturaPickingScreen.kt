@@ -78,6 +78,14 @@ import android.media.AudioManager
 import android.media.ToneGenerator
 import android.os.Handler
 import android.os.Looper
+import androidx.compose.foundation.border
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
 
 
 @Composable
@@ -90,6 +98,8 @@ fun LecturaPickingScreen(
     whsCode: String,
     itemCode : String,
     barCode: String,
+    CantidadLiberada: Int,
+    pickEntry: Int,
     navController: NavHostController
 ) {
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -129,9 +139,10 @@ fun LecturaPickingScreen(
     val request = IniciarPickingLecturaRequest(
         usuario = Sesion.usuario
     )
-    var showDialogItem     by remember { mutableStateOf(false) }
-    var showDialogCantidad by remember { mutableStateOf(false) }
-    var showDialogSerie    by remember { mutableStateOf(false) }
+    var showDialogItem        by remember { mutableStateOf(false) }
+    var showDialogCantidad    by remember { mutableStateOf(false) }
+    var volverADetallePicking by remember { mutableStateOf(false) }
+    var showDialogSerie        by remember { mutableStateOf(false) }
     var mostrarDialogoSiguienteUbicacion by remember {
         mutableStateOf(false)
     }
@@ -144,8 +155,13 @@ fun LecturaPickingScreen(
         color = Color.Red,
         fontWeight = FontWeight.Bold
     )
+
     var lecturaItemJob by remember {
         mutableStateOf<kotlinx.coroutines.Job?>(null)
+    }
+
+    var volverAItem by remember {
+        mutableStateOf(false)
     }
 
 
@@ -187,40 +203,86 @@ fun LecturaPickingScreen(
                                         val serieDesdeTexto = extractedText2.trim()
                                         val serieHastaTexto = extractedText3.trim()
 
+                                        val esEntradaManual =
+                                            serieDesdeTexto == "000000000" &&
+                                                    serieHastaTexto == "000000000"
+
+                                        val cantidadIngresada =
+                                            CantidadEscaneada.toIntOrNull() ?: 0
+
                                         if (serieDesdeTexto.isBlank() || serieHastaTexto.isBlank()) {
+
                                             mensajeError2 = "Rango de series inválido"
                                             showDialogCantidad = true
+
                                             return@launch
                                         }
 
-                                        val serieDesde = serieDesdeTexto.toLongOrNull()
-                                        val serieHasta = serieHastaTexto.toLongOrNull()
+                                        val serieDesde =
+                                            serieDesdeTexto.toLongOrNull()
+
+                                        val serieHasta =
+                                            serieHastaTexto.toLongOrNull()
 
                                         if (serieDesde == null || serieHasta == null) {
+
                                             mensajeError2 = "Rango de series inválido"
                                             showDialogCantidad = true
+
                                             return@launch
                                         }
 
                                         if (serieDesde > serieHasta) {
+
                                             mensajeError2 =
                                                 "La serie desde ($serieDesdeTexto) no puede ser mayor que la serie hasta ($serieHastaTexto)"
+
                                             showDialogCantidad = true
+
                                             return@launch
                                         }
 
                                         // =================================================
                                         // CANTIDAD REAL DE LA ETIQUETA
-                                        //
-                                        // 000003752 -> 000003752 = 1
-                                        // 000003752 -> 000003754 = 3
                                         // =================================================
 
-                                        val cantidadEtiqueta = (serieHasta - serieDesde) + 1L
+                                        val cantidadEtiqueta =
+                                            (serieHasta - serieDesde) + 1L
+
+
+                                        // =================================================
+                                        // VALIDAR CANTIDAD DIGITADA CONTRA LA ETIQUETA
+                                        // =================================================
+
+                                        if (
+                                            !esEntradaManual &&
+                                            cantidadIngresada > cantidadEtiqueta
+                                        ) {
+
+                                            mensajeError2 =
+                                                "La cantidad ingresada ($cantidadIngresada) " +
+                                                        "supera la cantidad indicada por la etiqueta ($cantidadEtiqueta)."
+
+                                            showDialogCantidad = true
+
+                                            CantidadEscaneada = ""
+                                            cantidad = ""
+                                            delay(100)
+                                            cantidadFocusRequester.requestFocus()
+
+                                            return@launch
+                                        }
+
+                                        // =================================================
+                                        // LA CANTIDAD REAL SIEMPRE VIENE DE LA ETIQUETA
+                                        // =================================================
 
                                         // La cantidad viene de la etiqueta.
-                                        CantidadEscaneada = cantidadEtiqueta.toString()
-                                        cantidad = cantidadEtiqueta.toString()
+                                        CantidadEscaneada =
+                                            cantidadEtiqueta.toString()
+
+                                        cantidad =
+                                            cantidadEtiqueta.toString()
 
                                         Log.d(
                                             "*MAKITA*PICKING*",
@@ -237,7 +299,8 @@ fun LecturaPickingScreen(
                                         val datosPicking =
                                             apiService.obtenerUbicacionPickingDetalle(
                                                 absEntry,
-                                                binAbs
+                                                binAbs,
+                                                pickEntry
                                             )
 
                                         val detalle =
@@ -246,29 +309,57 @@ fun LecturaPickingScreen(
                                             }
 
                                         if (detalle == null) {
-                                            mensajeError2 = "No se encontró el detalle del picking."
+
+                                            mensajeError2 =
+                                                "No se encontró el detalle del picking."
+
                                             showDialogCantidad = true
+
                                             return@launch
                                         }
+
+                                        // =================================================
+                                        // CANTIDAD LIBERADA / CAPTURADA
+                                        // =================================================
 
                                         val cantidadLiberada =
-                                            detalle.CantidadLiberada
-                                                .trim()
-                                                .replace(",", ".")
-                                                .toDoubleOrNull()
-
-                                        if (cantidadLiberada == null) {
-                                            mensajeError2 =
-                                                "No se pudo obtener la cantidad solicitada del artículo."
-                                            showDialogCantidad = true
-                                            return@launch
-                                        }
+                                            detalle.CantidadLiberada ?: 0
 
                                         val cantidadCapturada =
-                                            detalle.CantidadCapturada ?: 0.0
+                                            detalle.CantidadCapturada ?: 0
+
+                                        Log.d(
+                                            "*MAKITA*PICKING*",
+                                            "HERRAMIENTA | " +
+                                                    "CantidadCapturada=$cantidadCapturada"
+                                        )
 
                                         val cantidadPendiente =
                                             cantidadLiberada - cantidadCapturada
+
+                                        // =================================================
+                                        // VALIDAR INGRESO MANUAL
+                                        // =================================================
+
+                                        if (
+                                            esEntradaManual &&
+                                            cantidadIngresada > cantidadPendiente
+                                        ) {
+
+                                            mensajeError2 =
+                                                "La cantidad ingresada ($cantidadIngresada) supera la cantidad pendiente ($cantidadPendiente)."
+
+                                            showDialogCantidad = true
+
+                                            CantidadEscaneada = ""
+                                            cantidad = ""
+
+                                            delay(100)
+
+                                            cantidadFocusRequester.requestFocus()
+
+                                            return@launch
+                                        }
 
                                         Log.d(
                                             "*MAKITA*PICKING*",
@@ -286,7 +377,7 @@ fun LecturaPickingScreen(
                                         if (cantidadPendiente <= 0) {
 
                                             mensajeError2 =
-                                                "El artículo identificado ya cumplió con su cantidad solicitada."
+                                                "El item seleccionado ya cumplio con su cantidad solicitada."
 
                                             showDialogCantidad = true
 
@@ -309,11 +400,9 @@ fun LecturaPickingScreen(
 
                                         // =================================================
                                         // LA ETIQUETA NO PUEDE SUPERAR LO PENDIENTE
-                                        //
-                                        // SE VALIDA ANTES DE GUARDAR CUALQUIER SERIE.
                                         // =================================================
 
-                                        if (cantidadEtiqueta.toDouble() > cantidadPendiente) {
+                                        if (cantidadEtiqueta > cantidadPendiente) {
 
                                             val pendienteTexto =
                                                 if (cantidadPendiente % 1.0 == 0.0) {
@@ -326,7 +415,7 @@ fun LecturaPickingScreen(
                                                 "ETIQUETA MASTER\n\n" +
                                                         "ETIQUETA DE CAJA contiene $cantidadEtiqueta unidades.\n\n" +
                                                         "UNIDADES SOLICITADAS: $pendienteTexto\n\n" +
-                                                        "ETIQUETA INCORRECTA, INGRESE ETIQUETA INDIVIDUAL,  supera las unidades solicitadas."
+                                                        "ETIQUETA INCORRECTA, INGRESE ETIQUETA INDIVIDUAL, supera las unidades solicitadas."
 
                                             showDialogCantidad = true
 
@@ -348,15 +437,151 @@ fun LecturaPickingScreen(
                                         }
 
                                         // =================================================
+                                        // INGRESO MANUAL
+                                        // =================================================
+
+                                        if (esEntradaManual) {
+
+                                            val request =
+                                                RegistrarPickingCapturaRequest(
+                                                    idDetalle = idDetalle,
+                                                    numeroSerie = "",
+                                                    cantidad = cantidadIngresada,
+                                                    whsCode = whsCode,
+                                                    binAbs = binAbs,
+                                                    barCode = codigoEsperado.uppercase(),
+                                                    usuario = Sesion.usuario
+                                                )
+
+                                            val respuesta =
+                                                apiService.registrarPickingCaptura(request)
+
+                                            Log.d(
+                                                "*MAKITA*",
+                                                "MANUAL | " +
+                                                        "success=${respuesta.success}, " +
+                                                        "detalleCompleto=${respuesta.detalleCompleto}, " +
+                                                        "pickingCompleto=${respuesta.pickingCompleto}, " +
+                                                        "siguienteDetalle=${respuesta.siguienteDetalle}"
+                                            )
+
+                                            // =================================================
+                                            // ERROR AL REGISTRAR
+                                            // =================================================
+
+                                            if (!respuesta.success) {
+
+                                                mensajeError2 =
+                                                    respuesta.message
+
+                                                showDialogCantidad = true
+
+                                                CantidadEscaneada = ""
+                                                cantidad = ""
+
+                                                delay(100)
+
+                                                cantidadFocusRequester.requestFocus()
+
+                                                return@launch
+                                            }
+
+                                            // =================================================
+                                            // SI TERMINÓ EL DETALLE
+                                            // =================================================
+
+                                            if (respuesta.detalleCompleto) {
+
+                                                // =================================================
+                                                // TERMINÓ TODO EL PICKING
+                                                // =================================================
+
+                                                if (respuesta.pickingCompleto) {
+
+                                                    CantidadEscaneada = ""
+
+                                                    mensajeError2 = "¡PICKING TERMINADO!"
+                                                    volverADetallePicking = true
+                                                    showDialogCantidad = true
+
+                                                    return@launch
+                                                }
+
+                                                // =================================================
+                                                // BUSCAR SIGUIENTE DETALLE
+                                                // =================================================
+
+                                                val siguiente =
+                                                    respuesta.siguienteDetalle
+
+                                                if (siguiente != null) {
+
+                                                    Log.d(
+                                                        "*MAKITA*",
+                                                        "MANUAL -> SIGUIENTE UBICACION | " +
+                                                                "Id=${siguiente.Id} | " +
+                                                                "Item=${siguiente.ItemCode} | " +
+                                                                "Bin=${siguiente.BinCode} | " +
+                                                                "BinAbs=${siguiente.BinAbs}" +
+                                                                "PickEntry=${siguiente.PickEntry} | "
+
+                                                    )
+
+                                                    CantidadEscaneada = ""
+
+                                                    mensajeError2 =
+                                                        "Ubicación completada.\n\n" +
+                                                                "Pasando a la siguiente ubicación..."
+
+                                                    showDialogCantidad = true
+
+                                                    delay(1500)
+
+                                                    showDialogCantidad = false
+
+                                                    Log.d(
+                                                        "*MAKITA*",
+                                                        "MANUAL -> NAVEGANDO A BinAbs=${siguiente.BinAbs} PickEntry=${siguiente.PickEntry}"
+                                                    )
+
+                                                    navController.navigate(
+                                                        "detalleUbicacionPicking/" +
+                                                                "$absEntry/" +
+                                                                "${siguiente.BinAbs}/" +
+                                                                "${siguiente.PickEntry}"
+                                                    ) {
+                                                        popUpTo(
+                                                            "detalleUbicacionPicking/$absEntry/$binAbs/$pickEntry"
+                                                        ) {
+                                                            inclusive = true
+                                                        }
+                                                    }
+
+                                                    return@launch
+
+                                                } else {
+
+                                                    mensajeError2 =
+                                                        "No se encontró el siguiente detalle."
+
+                                                    showDialogCantidad = true
+
+                                                    return@launch
+                                                }
+                                            }
+
+                                            // =================================================
+                                            // MANUAL REGISTRADO PERO DETALLE NO COMPLETO
+                                            // =================================================
+
+                                            CantidadEscaneada = ""
+                                            cantidad = ""
+
+                                            return@launch
+                                        }
+
+                                        // =================================================
                                         // CONSERVAR CEROS A LA IZQUIERDA
-                                        //
-                                        // Ejemplo:
-                                        // 000003752 -> 000003754
-                                        //
-                                        // Guarda:
-                                        // 000003752
-                                        // 000003753
-                                        // 000003754
                                         // =================================================
 
                                         val anchoSerie =
@@ -430,7 +655,8 @@ fun LecturaPickingScreen(
 
                                                     CantidadEscaneada = ""
 
-                                                    mensajeError2 = "¡PICKING TERMINADO!"
+                                                    mensajeError2 =
+                                                        "¡PICKING TERMINADO!"
 
                                                     showDialogCantidad = true
 
@@ -438,9 +664,8 @@ fun LecturaPickingScreen(
 
                                                 } else {
 
-                                                    /* AQUI SEGUIMOS*/
-
-                                                    val siguiente = respuesta.siguienteDetalle
+                                                    val siguiente =
+                                                        respuesta.siguienteDetalle
 
                                                     if (siguiente != null) {
 
@@ -459,10 +684,11 @@ fun LecturaPickingScreen(
                                                         navController.navigate(
                                                             "detalleUbicacionPicking/" +
                                                                     "$absEntry/" +
-                                                                    "${siguiente.BinAbs}"
+                                                                    "${siguiente.BinAbs}/" +
+                                                                    "$pickEntry"
                                                         ) {
                                                             popUpTo(
-                                                                "detalleUbicacionPicking/$absEntry/$binAbs"
+                                                                "detalleUbicacionPicking/$absEntry/$binAbs/$pickEntry"
                                                             ) {
                                                                 inclusive = true
                                                             }
@@ -500,13 +726,14 @@ fun LecturaPickingScreen(
                                                 "Herramienta registrada correctamente.\n\n" +
                                                         "Cantidad capturada: 1"
                                             } else {
-                                                "Caja MASTER registrada correctamente.\n\n" +
+                                                "Caja MASTER registrada de forma correcta.\n\n" +
                                                         "Series registradas: $cantidadEtiqueta"
                                             }
 
+
+                                        volverAItem = true
                                         showDialogCantidad = true
 
-                                        delay(100)
 
                                         text = ""
                                         extractedText = ""
@@ -516,13 +743,15 @@ fun LecturaPickingScreen(
                                         textFieldValue2 = ""
                                         cantidad = ""
 
-                                        itemFocusRequester.requestFocus()
+                                       // delay(100)
+                                       // itemFocusRequester.requestFocus()
                                     }
 
 
                                     // =================================================
                                     // ACCESORIOS / REPUESTOS
                                     // =================================================
+
                                     "ACCESORIOS", "REPUESTOS" -> {
 
                                         val request =
@@ -548,14 +777,15 @@ fun LecturaPickingScreen(
 
                                         if (!respuesta.success) {
 
-                                            mensajeError2 = respuesta.message
+                                            mensajeError2 =
+                                                respuesta.message
+
                                             showDialogCantidad = true
                                             CantidadEscaneada = ""
+
                                             return@launch
 
                                         } else {
-
-
 
                                             Log.d(
                                                 "*MAKITA*PICKING*",
@@ -567,14 +797,17 @@ fun LecturaPickingScreen(
 
                                             if (respuesta.detalleCompleto) {
 
-                                                if (respuesta.pickingCompleto) {
-
+                                                if (respuesta.pickingCompleto)
+                                                {
                                                     mensajeError2 = "¡PICKING TERMINADO!"
                                                     showDialogCantidad = true
 
-                                                } else {
+                                                }
+                                                else
+                                                {
 
-                                                    val siguiente = respuesta.siguienteDetalle
+                                                    val siguiente =
+                                                        respuesta.siguienteDetalle
 
                                                     if (siguiente != null) {
 
@@ -590,15 +823,19 @@ fun LecturaPickingScreen(
                                                         navController.navigate(
                                                             "detalleUbicacionPicking/" +
                                                                     "$absEntry/" +
-                                                                    "${siguiente.BinAbs}"
-
+                                                                    "${siguiente.BinAbs}/" +
+                                                                    "$pickEntry"
                                                         ) {
-                                                            popUpTo("detalleUbicacionPicking/$absEntry/$binAbs") {
+                                                            popUpTo(
+                                                                "detalleUbicacionPicking/$absEntry/$binAbs/$pickEntry"
+                                                            ) {
                                                                 inclusive = true
                                                             }
                                                         }
 
-                                                    } else {
+                                                    }
+                                                    else
+                                                    {
 
                                                         Log.d(
                                                             "*MAKITA*PICKING*",
@@ -626,6 +863,7 @@ fun LecturaPickingScreen(
                                     // =================================================
                                     // TIPO NO RECONOCIDO
                                     // =================================================
+
                                     else -> {
 
                                         mensajeError2 =
@@ -670,8 +908,6 @@ fun LecturaPickingScreen(
             }
         }
     }
-
-
 
     suspend fun validarUbicacionOrigen() {
 
@@ -930,15 +1166,17 @@ fun LecturaPickingScreen(
                             Text(
                                 text = "DETALLE ARTICULO",
                                 color = Color.White,
-                                fontSize = 14.sp
+                                fontSize = 13.sp
                             )
 
                             Text(
-                                text = "${itemCode.trim()}",
+                                text = "${itemCode.trim()} Recoger: ${CantidadLiberada} ",
                                 color = Color.White,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 18.sp
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 19.sp
                             )
+
+
                         }
                     }
                 }
@@ -962,6 +1200,7 @@ fun LecturaPickingScreen(
                 ) {
 
                     // BODEGA
+                    /*
                     OutlinedTextField(
                         value = whsCode,
                         onValueChange = {},
@@ -974,108 +1213,479 @@ fun LecturaPickingScreen(
                         modifier = Modifier
                             .weight(1f)
                     )
+                    */
+
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .border(
+                                width = 1.dp,
+                                color = Color.Gray,
+                                shape = RoundedCornerShape(4.dp)
+                            )
+                    ) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(Color.LightGray)
+                                    .padding(
+                                        horizontal = 12.dp,
+                                        vertical = 6.dp
+                                    )
+                            ) {
+                                Text(
+                                    text = "Bodega",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color.DarkGray
+                                )
+                            }
+
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(
+                                        horizontal = 12.dp,
+                                        vertical = 14.dp
+                                    )
+                            ) {
+                                Text(
+                                    text = whsCode.uppercase().trim(),
+                                    style = estiloTextoRojo,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                    }
+
+
 
                     // UBICACION
-                    OutlinedTextField(
-                        value = ubicacionEscaneada,
-                        onValueChange = { nuevoValor ->
-
-                            ubicacionEscaneada = nuevoValor.uppercase().trim()
-
-                            Log.d(
-                                "*MAKITA*INGRESA*",
-                                "UBICACION ESPERADA = $ubicacionEscaneada vs $codigoEsperado"
-                            )
-
-                            if (ubicacionEscaneada.length > 12) {
-
-                                mensajeError2 =
-                                    "La ubicación no debe exceder los 10 caracteres"
-
-                                ubicacionEscaneada = ""
-                                extractedText = ""
-                                cantidad = ""
-                                showDialog = true
-
-                                return@OutlinedTextField
-                            }
-
-                            if (ubicacionEscaneada.length == codigoEsperado.trim().length) {
-
-                                keyboardController?.hide()
-
-                                if (
-                                    ubicacionEscaneada.uppercase() ==
-                                    codigoEsperado.uppercase().trim()
-                                ) {
-
-                                    itemFocusRequester.requestFocus()
-
-                                } else {
-
-                                    try {
-
-                                        val toneGenerator =
-                                            ToneGenerator(
-                                                AudioManager.STREAM_ALARM,
-                                                100
-                                            )
-
-                                        toneGenerator.startTone(
-                                            ToneGenerator.TONE_CDMA_ABBR_ALERT,
-                                            350
-                                        )
-
-                                        Handler(Looper.getMainLooper()).postDelayed({
-
-                                            toneGenerator.startTone(
-                                                ToneGenerator.TONE_CDMA_ABBR_ALERT,
-                                                350
-                                            )
-
-                                        }, 400)
-
-                                        Handler(Looper.getMainLooper()).postDelayed({
-                                            toneGenerator.release()
-                                        }, 850)
-
-
-                                    } catch (e: Exception) {
-                                        Log.e(
-                                            "*MAKITA*",
-                                            "Error reproduciendo sonido: ${e.message}"
-                                        )
-                                    }
-
-
-
-                                    mensajeError2 =
-                                        "Ubicación incorrecta. Se esperaba: ${codigoEsperado.trim()}"
-
-                                    ubicacionEscaneada = ""
-                                    showDialog = true
-                                }
-                            }
-                        },
-                        label = {
-                            Text(
-                                "Ubicacion",
-                                style = MaterialTheme.typography.bodySmall
-                            )
-                        },
-                        singleLine = true,
-
-                        textStyle = estiloTextoRojo,
-
+                    Box(
                         modifier = Modifier
                             .weight(2f)
-                            .focusRequester(ubicacionEscaneadaRequester)
-                            .onFocusChanged {
-                                if (it.isFocused) {
-                                    keyboardController?.hide()
-                                }
+                            .border(
+                                width = 1.dp,
+                                color = Color.Gray,
+                                shape = RoundedCornerShape(4.dp)
+                            )
+                    ) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+
+                            // ENCABEZADO
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(Color.LightGray)
+                                    .padding(
+                                        horizontal = 12.dp,
+                                        vertical = 6.dp
+                                    )
+                            ) {
+                                Text(
+                                    text = "Ubicacion",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color.DarkGray
+                                )
                             }
-                    )
+
+                            // CAMPO
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(
+                                        horizontal = 12.dp,
+                                        vertical = 4.dp
+                                    )
+                            ) {
+
+                                BasicTextField(
+                                    value = ubicacionEscaneada,
+
+                                    onValueChange = { nuevoValor ->
+
+                                        ubicacionEscaneada = nuevoValor.uppercase().trim()
+
+                                        Log.d(
+                                            "*MAKITA*INGRESA*",
+                                            "UBICACION ESPERADA = $ubicacionEscaneada vs $codigoEsperado"
+                                        )
+
+                                        // ============================================================
+                                        // NO PUEDE SUPERAR 12 CARACTERES
+                                        // ============================================================
+
+                                        if (ubicacionEscaneada.length > 12) {
+
+                                            try {
+
+                                                val toneGenerator =
+                                                    ToneGenerator(
+                                                        AudioManager.STREAM_ALARM,
+                                                        100
+                                                    )
+
+                                                toneGenerator.startTone(
+                                                    ToneGenerator.TONE_CDMA_ABBR_ALERT,
+                                                    350
+                                                )
+
+                                                Handler(Looper.getMainLooper()).postDelayed({
+
+                                                    toneGenerator.startTone(
+                                                        ToneGenerator.TONE_CDMA_ABBR_ALERT,
+                                                        350
+                                                    )
+
+                                                }, 400)
+
+                                                Handler(Looper.getMainLooper()).postDelayed({
+                                                    toneGenerator.release()
+                                                }, 850)
+
+                                            } catch (e: Exception) {
+
+                                                Log.e(
+                                                    "*MAKITA*",
+                                                    "Error reproduciendo sonido: ${e.message}"
+                                                )
+                                            }
+
+                                            mensajeError2 =
+                                                "La ubicacion no puede exceder los 12 caracteres"
+
+                                            ubicacionEscaneada = ""
+                                            extractedText = ""
+                                            cantidad = ""
+
+                                            showDialog = true
+
+                                            return@BasicTextField
+                                        }
+
+                                        // ============================================================
+                                        // VALIDACION AUTOMATICA DEL ESCANER
+                                        // SOLO SE EJECUTA CUANDO:
+                                        // - TIENE AL MENOS 5 CARACTERES
+                                        // - LLEGO AL LARGO DE LA UBICACION ESPERADA
+                                        // ============================================================
+
+                                        if (
+                                            ubicacionEscaneada.length >= 5 &&
+                                            ubicacionEscaneada.length ==
+                                            codigoEsperado.trim().length
+                                        ) {
+
+                                            keyboardController?.hide()
+
+                                            // ========================================================
+                                            // UBICACION CORRECTA
+                                            // ========================================================
+
+                                            if (
+                                                ubicacionEscaneada.uppercase() ==
+                                                codigoEsperado.uppercase().trim()
+                                            ) {
+
+                                                itemFocusRequester.requestFocus()
+
+                                            } else {
+
+                                                // ====================================================
+                                                // TONO UBICACION INCORRECTA
+                                                // ====================================================
+
+                                                try {
+
+                                                    val toneGenerator =
+                                                        ToneGenerator(
+                                                            AudioManager.STREAM_ALARM,
+                                                            100
+                                                        )
+
+                                                    toneGenerator.startTone(
+                                                        ToneGenerator.TONE_CDMA_ABBR_ALERT,
+                                                        350
+                                                    )
+
+                                                    Handler(Looper.getMainLooper()).postDelayed({
+
+                                                        toneGenerator.startTone(
+                                                            ToneGenerator.TONE_CDMA_ABBR_ALERT,
+                                                            350
+                                                        )
+
+                                                    }, 400)
+
+                                                    Handler(Looper.getMainLooper()).postDelayed({
+                                                        toneGenerator.release()
+                                                    }, 850)
+
+                                                } catch (e: Exception) {
+
+                                                    Log.e(
+                                                        "*MAKITA*",
+                                                        "Error reproduciendo sonido: ${e.message}"
+                                                    )
+                                                }
+
+                                                mensajeError2 =
+                                                    "Ubicación incorrecta. Se esperaba: ${codigoEsperado.trim()}"
+
+                                                ubicacionEscaneada = ""
+
+                                                showDialog = true
+                                            }
+                                        }
+                                    },
+
+                                    singleLine = true,
+
+                                    textStyle = estiloTextoRojo,
+
+                                    keyboardOptions = KeyboardOptions.Default.copy(
+                                        keyboardType = KeyboardType.Text,
+                                        imeAction = ImeAction.Done
+                                    ),
+
+                                    // ================================================================
+                                    // ENTER / DONE
+                                    // ================================================================
+
+                                    keyboardActions = KeyboardActions(
+                                        onDone = {
+
+                                            val ubicacion = ubicacionEscaneada.trim()
+
+                                            Log.d(
+                                                "*MAKITA*INGRESA*",
+                                                "ENTER UBICACION = [$ubicacion] LARGO=${ubicacion.length}"
+                                            )
+
+                                            // ========================================================
+                                            // VACÍA
+                                            // ========================================================
+
+                                            if (ubicacion.isBlank()) {
+
+                                                return@KeyboardActions
+                                            }
+
+                                            // ========================================================
+                                            // MENOS DE 5 CARACTERES
+                                            // ========================================================
+
+                                            if (ubicacion.length < 5) {
+
+                                                try {
+
+                                                    val toneGenerator =
+                                                        ToneGenerator(
+                                                            AudioManager.STREAM_ALARM,
+                                                            100
+                                                        )
+
+                                                    toneGenerator.startTone(
+                                                        ToneGenerator.TONE_CDMA_ABBR_ALERT,
+                                                        350
+                                                    )
+
+                                                    Handler(Looper.getMainLooper()).postDelayed({
+
+                                                        toneGenerator.startTone(
+                                                            ToneGenerator.TONE_CDMA_ABBR_ALERT,
+                                                            350
+                                                        )
+
+                                                    }, 400)
+
+                                                    Handler(Looper.getMainLooper()).postDelayed({
+                                                        toneGenerator.release()
+                                                    }, 850)
+
+                                                } catch (e: Exception) {
+
+                                                    Log.e(
+                                                        "*MAKITA*",
+                                                        "Error reproduciendo sonido: ${e.message}"
+                                                    )
+                                                }
+
+                                                mensajeError2 =
+                                                    "La ubicación debe tener al menos 5 caracteres"
+
+                                                ubicacionEscaneada = ""
+                                                extractedText = ""
+                                                cantidad = ""
+
+                                                showDialog = true
+
+                                                return@KeyboardActions
+                                            }
+
+                                            // ========================================================
+                                            // MÁS DE 12 CARACTERES
+                                            // ========================================================
+
+                                            if (ubicacion.length > 12) {
+
+                                                try {
+
+                                                    val toneGenerator =
+                                                        ToneGenerator(
+                                                            AudioManager.STREAM_ALARM,
+                                                            100
+                                                        )
+
+                                                    toneGenerator.startTone(
+                                                        ToneGenerator.TONE_CDMA_ABBR_ALERT,
+                                                        350
+                                                    )
+
+                                                    Handler(Looper.getMainLooper()).postDelayed({
+
+                                                        toneGenerator.startTone(
+                                                            ToneGenerator.TONE_CDMA_ABBR_ALERT,
+                                                            350
+                                                        )
+
+                                                    }, 400)
+
+                                                    Handler(Looper.getMainLooper()).postDelayed({
+                                                        toneGenerator.release()
+                                                    }, 850)
+
+                                                } catch (e: Exception) {
+
+                                                    Log.e(
+                                                        "*MAKITA*",
+                                                        "Error reproduciendo sonido: ${e.message}"
+                                                    )
+                                                }
+
+                                                mensajeError2 =
+                                                    "La ubicacion no puede exceder los 12 caracteres"
+
+                                                ubicacionEscaneada = ""
+                                                extractedText = ""
+                                                cantidad = ""
+
+                                                showDialog = true
+
+                                                return@KeyboardActions
+                                            }
+
+                                            // ========================================================
+                                            // VALIDAR UBICACION DIGITADA
+                                            // ========================================================
+
+                                            keyboardController?.hide()
+
+                                            if (
+                                                ubicacion.uppercase() ==
+                                                codigoEsperado.uppercase().trim()
+                                            ) {
+
+                                                // ====================================================
+                                                // CORRECTA
+                                                // ====================================================
+
+                                                itemFocusRequester.requestFocus()
+
+                                            } else {
+
+                                                // ====================================================
+                                                // INCORRECTA
+                                                // ====================================================
+
+                                                try {
+
+                                                    val toneGenerator =
+                                                        ToneGenerator(
+                                                            AudioManager.STREAM_ALARM,
+                                                            100
+                                                        )
+
+                                                    toneGenerator.startTone(
+                                                        ToneGenerator.TONE_CDMA_ABBR_ALERT,
+                                                        350
+                                                    )
+
+                                                    Handler(Looper.getMainLooper()).postDelayed({
+
+                                                        toneGenerator.startTone(
+                                                            ToneGenerator.TONE_CDMA_ABBR_ALERT,
+                                                            350
+                                                        )
+
+                                                    }, 400)
+
+                                                    Handler(Looper.getMainLooper()).postDelayed({
+                                                        toneGenerator.release()
+                                                    }, 850)
+
+                                                } catch (e: Exception) {
+
+                                                    Log.e(
+                                                        "*MAKITA*",
+                                                        "Error reproduciendo sonido: ${e.message}"
+                                                    )
+                                                }
+
+                                                mensajeError2 =
+                                                    "Ubicación incorrecta. Se esperaba: ${codigoEsperado.trim()}"
+
+                                                ubicacionEscaneada = ""
+
+                                                showDialog = true
+                                            }
+                                        }
+                                    ),
+
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(40.dp)
+                                        .focusRequester(ubicacionEscaneadaRequester)
+                                        .onFocusChanged { focusState ->
+
+                                            if (focusState.isFocused) {
+                                                keyboardController?.hide()
+                                            }
+                                        },
+
+                                    decorationBox = { innerTextField ->
+
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .padding(
+                                                    horizontal = 12.dp,
+                                                    vertical = 4.dp
+                                                ),
+                                            contentAlignment = Alignment.CenterStart
+                                        ) {
+
+                                            if (ubicacionEscaneada.isEmpty()) {
+                                                Text(
+                                                    text = "Ubicación",
+                                                    color = Color.Gray,
+                                                    fontSize = 14.sp
+                                                )
+                                            }
+
+                                            innerTextField()
+                                        }
+                                    }
+                                )
+                            }
+                        }
+                    }
 
 
                 }
@@ -1130,6 +1740,14 @@ fun LecturaPickingScreen(
                                 Log.d(
                                     "*MAKITA*",
                                     "ITEM: $newText - LARGOXX: ${newText.length}"
+                                )
+
+                                extractedText =
+                                    newText.substring(0, 17).trim()
+
+                                Log.d(
+                                    "*MAKITA*",
+                                    "LARGO DE extractedText MLS100: $extractedText"
                                 )
 
 
@@ -1677,10 +2295,14 @@ fun LecturaPickingScreen(
 
                     keyboardActions = KeyboardActions(
                         onDone = {
-
                             coroutineScope.launch {
 
                                 val itemManual = text.trim().uppercase()
+                                extractedText2 = "000000000"     //Serie Desde
+                                extractedText3 = "000000000"    // Serie Hasta
+                                extractedText4 = "0000000000000" // EAN
+
+
 
                                 if (itemManual.isBlank()) {
                                     return@launch
@@ -1690,15 +2312,46 @@ fun LecturaPickingScreen(
                                 // VALIDAR ITEM CONTRA EL PICKING
                                 // ============================================
 
-                                if (itemManual.uppercase() != itemCode.trim().uppercase()) {
+                                if (itemManual != itemCode.trim().uppercase()) {
 
                                     Log.d(
-                                        "*MAKITA*PICKING*",
-                                        "ITEM CORRECTO MANUAL = $extractedText  Larrgho ${itemManual.length}"
+                                        "MAKITA_PICKING",
+                                        "ITEM INCORRECTO MANUAL = $itemManual Largo ${itemManual.length}"
                                     )
 
+                                    try {
+
+                                        val toneGenerator = ToneGenerator(
+                                            AudioManager.STREAM_ALARM,
+                                            100
+                                        )
+
+                                        toneGenerator.startTone(
+                                            ToneGenerator.TONE_CDMA_ABBR_ALERT,
+                                            350
+                                        )
+
+                                        Handler(Looper.getMainLooper()).postDelayed({
+                                            toneGenerator.startTone(
+                                                ToneGenerator.TONE_CDMA_ABBR_ALERT,
+                                                350
+                                            )
+                                        }, 400)
+
+                                        Handler(Looper.getMainLooper()).postDelayed({
+                                            toneGenerator.release()
+                                        }, 850)
+
+                                    } catch (e: Exception) {
+
+                                        Log.e(
+                                            "MAKITA",
+                                            "Error reproduciendo sonido: ${e.message}"
+                                        )
+                                    }
+
                                     mensajeError2 =
-                                        "Item incorrecto XX ${itemManual.uppercase()}. Escanee el item indicado en el picking ${itemCode.trim()}"
+                                        "Item incorrecto XX ${itemManual}. Escanee el item indicado en el picking ${itemCode.trim()}"
 
                                     text = ""
                                     extractedText = ""
@@ -1718,21 +2371,37 @@ fun LecturaPickingScreen(
                                 // ITEM CORRECTO
                                 // ============================================
 
-                                extractedText = itemManual.uppercase()
+                                extractedText = itemManual
 
                                 Log.d(
-                                    "*MAKITA*PICKING*",
+                                    "MAKITA_PICKING",
                                     "ITEM CORRECTO MANUAL = $extractedText"
                                 )
 
+                                // ============================================
+                                // VALIDAR TIPO DE ITEM
+                                // ============================================
+
                                 try {
 
-                                    val stock =
-                                        apiService.obtenerNombreItem(
+                                    gTipoItem = apiService
+                                        .consultarTipoItem(
                                             extractedText.trim()
                                         )
+                                        .trim()
 
+                                    Log.d(
+                                        "MAKITA",
+                                        "TIPO ITEM: $gTipoItem"
+                                    )
 
+                                    // ============================================
+                                    // OBTENER INFORMACIÓN DEL ITEM
+                                    // ============================================
+
+                                    val stock = apiService.obtenerNombreItem(
+                                        extractedText.trim()
+                                    )
 
                                     if (stock.data.isEmpty()) {
 
@@ -1759,7 +2428,7 @@ fun LecturaPickingScreen(
                                         stock.data.first().descripcion.trim()
 
                                     Log.d(
-                                        "*MAKITA*PICKING*",
+                                        "MAKITA_PICKING",
                                         "DESCRIPCIÓN = $textFieldValue2"
                                     )
 
@@ -1776,15 +2445,24 @@ fun LecturaPickingScreen(
                                 } catch (e: Exception) {
 
                                     Log.e(
-                                        "*MAKITA*PICKING*",
-                                        "ERROR ITEM MANUAL",
+                                        "MAKITA_PICKING",
+                                        "ERROR VALIDANDO ITEM MANUAL",
                                         e
                                     )
 
                                     mensajeError2 =
-                                        "Error al consultar el item: ${e.message}"
+                                        "No fue posible validar el item. Verifique la conexión e intente nuevamente."
 
                                     showDialogItem = true
+
+                                    text = ""
+                                    extractedText = ""
+                                    extractedText2 = ""
+                                    extractedText3 = ""
+                                    extractedText4 = ""
+                                    textFieldValue2 = ""
+                                    cantidad = ""
+                                    response = emptyList()
                                 }
                             }
                         }
@@ -1837,10 +2515,28 @@ fun LecturaPickingScreen(
                     )
                 }
 
+
                 Spacer(
                     modifier = Modifier.height(8.dp)
                 )
 
+                OutlinedTextField(
+                    value = extractedText.uppercase().trim(),
+                    onValueChange = {},
+                    readOnly = true,
+                    label = {
+                        Text("Item")
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    textStyle = estiloTextoRojo,
+                    singleLine = true
+                )
+
+
+                Spacer(
+                    modifier = Modifier.height(8.dp)
+                )
+/*
                 OutlinedTextField(
                     value = textFieldValue2.uppercase().trim(),
                     onValueChange = {},
@@ -1852,6 +2548,55 @@ fun LecturaPickingScreen(
                     textStyle = estiloTextoRojo,
                     singleLine = true
                 )
+                */
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(
+                            width = 1.dp,
+                            color = Color.Gray,
+                            shape = RoundedCornerShape(4.dp)
+                        )
+                ) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(Color.LightGray)
+                                .padding(
+                                    horizontal = 12.dp,
+                                    vertical = 6.dp
+                                )
+                        ) {
+                            Text(
+                                text = "Descripcion",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.DarkGray
+                            )
+                        }
+
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(
+                                    horizontal = 12.dp,
+                                    vertical = 10.dp
+                                )
+                        ) {
+                            Text(
+                                text = textFieldValue2.uppercase().trim(),
+                                style = estiloTextoRojo,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                }
+
 
 
 
@@ -1930,7 +2675,7 @@ fun LecturaPickingScreen(
                     )
                 }
 
-
+/*
                 if (showDialogCantidad) {
                     mostrarDialogo6(
                         titulo = "Aviso!",
@@ -1938,6 +2683,37 @@ fun LecturaPickingScreen(
                         onDismiss = {
                             showDialogCantidad = false
                             cantidadFocusRequester.requestFocus()
+                        }
+                    )
+                }*/
+
+
+                if (showDialogCantidad) {
+                    mostrarDialogo6(
+                        titulo = "Aviso!",
+                        mensaje = mensajeError2,
+                        onDismiss = {
+                            showDialogCantidad = false
+
+                            if (volverADetallePicking) {
+
+                                volverADetallePicking = false
+
+                                navController.popBackStack()
+
+                            } else if (volverAItem) {
+
+                                volverAItem = false
+
+                                coroutineScope.launch {
+                                    delay(100)
+                                    itemFocusRequester.requestFocus()
+                                }
+
+                            } else {
+
+                                cantidadFocusRequester.requestFocus()
+                            }
                         }
                     )
                 }
@@ -1954,8 +2730,6 @@ fun LecturaPickingScreen(
                         }
                     )
                 }
-
-
 
 
 
