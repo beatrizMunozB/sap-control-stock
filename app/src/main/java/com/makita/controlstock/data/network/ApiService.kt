@@ -802,6 +802,9 @@ data class OrdenesCompraResponse(
 )
 
 data class DetalleOrdenCompraResponse(
+    val OC_DocNum: Int,
+    val CardCode: String?,
+    val CardName: String?,
     val OC_Linea: Int,
     val ItemCode: String?,
     val Dscription: String?,
@@ -815,9 +818,151 @@ data class DetalleOrdenCompraApiResponse(
     val data: List<DetalleOrdenCompraResponse>?
 )
 
+data class ValidarSocioNegocioResponse(
+    val CardCode: String?,
+    val CardName: String?
+)
+
+data class ValidarSocioNegocioApiResponse(
+    val success: Boolean,
+    val message: String?,
+    val data: List<ValidarSocioNegocioResponse>?
+)
+
+data class ValidarNumeroOCResponse(
+    val DocEntry: Int,
+    val DocNum: Int,
+    val CardCode: String?,
+    val CardName: String?,
+    val DocDate: String?
+)
+
+data class ValidarNumeroOCApiResponse(
+    val success: Boolean,
+    val message: String?,
+    val data: List<ValidarNumeroOCResponse>?
+)
+
+data class RegistrarCapturaOrdenCompraResponse(
+    val idCaptura: Int?,
+    val idDetalle: Int?,
+    val cantidadCapturada: Int?,
+    val pendienteOC: Int?,
+    val estado: String?
+)
+
+data class RegistrarCapturaOrdenCompraApiResponse(
+    val success: Boolean,
+    val message: String?,
+    val data: RegistrarCapturaOrdenCompraResponse?
+)
+
+data class RegistrarCapturaOrdenCompraRequest(
+    val idDetalle: Int,
+    val numeroSerie: String?,
+    val cantidad: Int,
+    val whsCode: String?,
+    val barCode: String?,
+    val usuario: String
+)
+
+
+data class FacturaReservaResponse(
+    val DocEntry: Int,
+    val DocNum: Int,
+    val NumAtCard: String?,
+    val JrnlMemo: String?,
+    val DocDate: String?,
+    val CardCode: String?,
+    val CardName: String?,
+    val DocTotal: String?,
+    val DocStatus: String?
+)
+
+data class FacturasReservaApiResponse(
+    val success: Boolean,
+    val data: List<FacturaReservaResponse>?
+)
+
+data class FacturaReservaDetalleResponse(
+    val DocEntry: Int,
+    val DocNum: Int,
+    val NumAtCard: String?,
+    val JrnlMemo: String?,
+    val DocDate: String?,
+    val CardCode: String?,
+    val CardName: String?,
+    val LineNum: Int,
+    val ItemCode: String?,
+    val Dscription: String?,
+    val Quantity: String?,
+    val OpenQty: String?,
+    val WhsCode: String?
+)
+
+data class FacturaReservaDetalleApiResponse(
+    val success: Boolean,
+    val data: List<FacturaReservaDetalleResponse>?
+)
+
+data class ObtenerDetalleIngresoMercanciaSQLApiResponse(
+    val success: Boolean,
+    val message: String?,
+    val data: List<DetalleIngresoMercanciaSQLResponse>?
+)
+
+data class DetalleIngresoMercanciaSQLResponse(
+    val Id: Int,
+    val IdCabecera: Int,
+    val LineNum: Int,
+    val ItemCode: String,
+    val ItemName: String?,
+    val WhsCode: String?,
+    val CantidadFactura: Double,
+    val CantidadPendiente: Double,
+    val CantidadCapturada: Double,
+    val Estado: String
+)
+
+
 
 interface ApiService
 {
+
+    @GET("api/obtenerDetalleIngresoMercanciaSQL/{docEntrySAP}")
+    suspend fun obtenerDetalleIngresoMercanciaSQL(
+        @Path("docEntrySAP") docEntrySAP: Int
+    ): ObtenerDetalleIngresoMercanciaSQLApiResponse
+
+    @GET("api/obtenerDetalleFacturaReserva/{docEntrySAP}")
+    suspend fun obtenerDetalleFacturaReserva(
+        @Path("docEntrySAP") docEntrySAP: Int
+    ): FacturaReservaDetalleApiResponse
+
+
+    @GET("api/obtenerFacturasReserva")
+    suspend fun obtenerFacturasReserva(
+        @Query("numeroFactura") numeroFactura: String = "",
+        @Query("socioNegocio") socioNegocio: String = "",
+        @Query("numAtCard") numAtCard: String = ""
+    ): FacturasReservaApiResponse
+
+    @POST("api/registrarCapturaOrdenCompra")
+    suspend fun registrarCapturaOrdenCompra(
+        @Body request: RegistrarCapturaOrdenCompraRequest
+    ): RegistrarCapturaOrdenCompraApiResponse
+
+
+    @GET("api/validar-numero-oc")
+    suspend fun validarNumeroOC(
+        @Query("numeroOC") numeroOC: String
+    ): ValidarNumeroOCApiResponse
+
+    @GET("api/validar-socio-negocio")
+    suspend fun validarSocioNegocio(
+        @Query("cardCode") cardCode: String
+    ): ValidarSocioNegocioApiResponse
+
 
     @GET("api/obtenerOrdenesCompra")
     suspend fun obtenerOrdenesCompra(

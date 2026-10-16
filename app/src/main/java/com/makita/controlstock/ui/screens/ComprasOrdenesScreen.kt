@@ -29,9 +29,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import android.util.Log
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.RectangleShape
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -45,24 +48,104 @@ fun ComprasOrdenesScreen(
     navController: NavHostController
 ) {
 
-    var numeroOC by remember {
-        mutableStateOf("")
+    var numeroOC            by remember { mutableStateOf("") }
+    var socioNegocio        by remember { mutableStateOf("") }
+    var ordenes             by remember { mutableStateOf<List<OrdenCompraResponse>>(emptyList()) }
+    var mensajeError        by remember { mutableStateOf("") }
+    var showDialog          by remember { mutableStateOf(false) }
+    var mensajeError2       by remember { mutableStateOf("") }
+    var showDialogCantidad  by remember { mutableStateOf(false) }
+    val socioNegocioFocusRequester = remember { FocusRequester() }
+
+    fun validarNumeroOC() {
+
+        if (numeroOC.trim().isEmpty()) {
+            return
+        }
+
+        CoroutineScope(Dispatchers.Main).launch {
+
+            try {
+
+                val respuesta = apiService.validarNumeroOC(
+                    numeroOC.trim()
+                )
+
+                if (respuesta.success && !respuesta.data.isNullOrEmpty())
+                {
+                    val orden = respuesta.data.first()
+                    Log.d(
+                        "*MAKITA*",
+                        "OC encontrada: ${orden.DocNum}"
+                    )
+                }
+                else
+                {
+                    mensajeError2 =
+                        respuesta.message ?: "Orden de Compra no encontrada"
+                    showDialogCantidad = true
+                }
+
+            } catch (e: Exception) {
+
+                Log.e("*MAKITA*", "Error validando Orden de Compra", e)
+                mensajeError2 = "Error al validar la Orden de Compra"
+                showDialogCantidad = true
+            }
+        }
     }
 
-    var socioNegocio by remember {
-        mutableStateOf("")
-    }
+    fun validarSocioNegocio() {
 
-    var ordenes by remember {
-        mutableStateOf<List<OrdenCompraResponse>>(emptyList())
-    }
+        if (socioNegocio.trim().isEmpty()) {
+            return
+        }
 
-    var mensajeError by remember {
-        mutableStateOf("")
-    }
+        CoroutineScope(Dispatchers.Main).launch {
 
-    var showDialog by remember {
-        mutableStateOf(false)
+            try {
+
+                val respuesta = apiService.validarSocioNegocio(
+                    socioNegocio.trim()
+                )
+
+                if (respuesta.success && !respuesta.data.isNullOrEmpty()) {
+
+                    val socio = respuesta.data.first()
+
+                    Log.d(
+                        "*MAKITA*",
+                        "Encontrado: ${socio.CardCode} - ${socio.CardName}"
+                    )
+
+                    socioNegocio = socio.CardCode ?: ""
+
+                } else {
+
+                    mensajeError2 =
+                        respuesta.message ?: "Socio de Negocio no encontrado"
+
+                    showDialogCantidad = true
+                }
+
+            } catch (e: Exception) {
+
+                Log.e(
+                    "*MAKITA*",
+                    "Error validando Socio de Negocio",
+                    e
+                )
+
+                socioNegocio = ""
+
+                mensajeError2 =
+                    "Socio de Negocio no encontrado.\n\n" +
+                            "Verifique el código ingresado e intente nuevamente."
+
+                showDialogCantidad = true
+
+            }
+        }
     }
 
     suspend fun buscarOrdenesCompra() {
@@ -152,7 +235,7 @@ fun ComprasOrdenesScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
+                        .padding(18.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
 
@@ -170,10 +253,10 @@ fun ComprasOrdenesScreen(
                     }
 
                     Text(
-                        text = "ORDENES DE COMPRA",
+                        text = "Ordenes de Compra",
                         color = Color.White,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 22.sp,
+                        fontSize = 20.sp,
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -183,18 +266,13 @@ fun ComprasOrdenesScreen(
                 modifier = Modifier.height(12.dp)
             )
 
-            /*
-             * CONTENIDO
-             */
+
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(horizontal = 16.dp)
             ) {
 
-                /*
-                 * FILTRO NUMERO OC
-                 */
                 OutlinedTextField(
                     value = numeroOC,
                     onValueChange = {
@@ -204,16 +282,20 @@ fun ComprasOrdenesScreen(
                         Text("Numero Orden de Compra")
                     },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    keyboardActions = KeyboardActions(
+                        onDone = {
+                            validarNumeroOC()
+                        }
+                    )
                 )
 
                 Spacer(
                     modifier = Modifier.height(10.dp)
                 )
 
-                /*
-                 * FILTRO SOCIO DE NEGOCIO
-                 */
+                socioNegocio = "PE3003-1"
+
                 OutlinedTextField(
                     value = socioNegocio,
                     onValueChange = {
@@ -223,16 +305,21 @@ fun ComprasOrdenesScreen(
                         Text("Socio de Negocio")
                     },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier =Modifier
+                        .fillMaxWidth()
+                        .focusRequester(socioNegocioFocusRequester),
+                    keyboardActions = KeyboardActions(
+                        onDone = {
+                            validarSocioNegocio()
+                        }
+                    )
                 )
 
                 Spacer(
                     modifier = Modifier.height(12.dp)
                 )
 
-                /*
-                 * BOTON BUSCAR
-                 */
+
                 Button(
                     onClick = {
                         CoroutineScope(Dispatchers.Main).launch {
@@ -280,7 +367,7 @@ fun ComprasOrdenesScreen(
                                 .clickable {
 
                                     navController.navigate(
-                                        "detalleOrdenCompra/${item.OC_DocEntry}"
+                                        "detalleOrdenCompra/${item.OC_DocEntry}/${item.OC_DocNum}"
                                     )
                                 },
 
@@ -303,7 +390,7 @@ fun ComprasOrdenesScreen(
                                 ) {
 
                                     Text(
-                                        text = "OC: ${item.OC_DocNum}",
+                                        text = "Doc. Nro: ${item.OC_DocNum}",
                                         fontSize = 16.sp,
                                         fontWeight = FontWeight.Bold,
                                         modifier = Modifier.weight(1f)
@@ -348,6 +435,19 @@ fun ComprasOrdenesScreen(
             mensaje = mensajeError,
             onDismiss = {
                 showDialog = false
+            }
+        )
+    }
+
+    if (showDialogCantidad) {
+
+        mostrarDialogo20(
+            titulo = "Aviso!",
+            mensaje = mensajeError2,
+            onDismiss = {
+                showDialogCantidad = false
+
+                socioNegocioFocusRequester.requestFocus()
             }
         )
     }

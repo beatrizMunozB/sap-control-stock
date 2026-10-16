@@ -1721,7 +1721,6 @@ fun LecturaPickingScreen(
 
                 OutlinedTextField(
                     value = text,
-
                     onValueChange = { newText ->
 
                         text = newText
@@ -1730,8 +1729,6 @@ fun LecturaPickingScreen(
                             modoManual = true
                             return@OutlinedTextField
                         }
-
-
 
                             coroutineScope.launch {
 
@@ -1793,9 +1790,7 @@ fun LecturaPickingScreen(
                                 }
 
 
-
-                                extractedText =
-                                    newText.substring(0, 20).trim()
+                                extractedText = newText.substring(0, 20).trim()
 
                                 Log.d(
                                     "*MAKITA*",
@@ -1824,21 +1819,7 @@ fun LecturaPickingScreen(
                                     return@launch
                                 }
 
-
-                                gTipoItem =
-                                    apiService.consultarTipoItem(
-                                        extractedText.trim()
-                                    ).trim()
-
-
-                                Log.d(
-                                    "*MAKITA*",
-                                    "TIPO ITEM: $gTipoItem"
-                                )
-
-
-
-
+                                gTipoItem = apiService.consultarTipoItem(extractedText.trim()).trim()
 
                                 if (gTipoItem.trim().uppercase() == "HERRAMIENTAS") {
 
@@ -1902,20 +1883,7 @@ fun LecturaPickingScreen(
                                             }
 
 
-                                        Log.d(
-                                            "*MAKITA*",
-                                            "ITEM: $newText | SERIE 1: $extractedText2"
-                                        )
 
-                                        Log.d(
-                                            "*MAKITA*",
-                                            "ITEM: $newText | SERIE 2: $extractedText3"
-                                        )
-
-                                        Log.d(
-                                            "*MAKITA*",
-                                            "ITEM: $newText | EAN: $extractedText4"
-                                        )
 
 
                                         try {
@@ -2427,10 +2395,7 @@ fun LecturaPickingScreen(
                                     textFieldValue2 =
                                         stock.data.first().descripcion.trim()
 
-                                    Log.d(
-                                        "MAKITA_PICKING",
-                                        "DESCRIPCIÓN = $textFieldValue2"
-                                    )
+
 
                                     // ============================================
                                     // PASAR A CANTIDAD

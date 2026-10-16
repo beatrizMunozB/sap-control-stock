@@ -1,13 +1,20 @@
 package com.makita.controlstock.ui.screens
 
+import android.net.Uri
 import android.util.Log
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.snapping.SnapPosition
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -43,12 +50,17 @@ import androidx.compose.material.icons.filled.Inventory
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.filled.QrCodeScanner
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.ui.text.style.TextAlign
 
 
 @Composable
 fun DetalleOrdenCompraScreen(
     navController: NavHostController,
-    docEntry: Int
+    docEntry: Int,
+    docNum: Int
 ) {
 
     var detalles by remember {
@@ -63,9 +75,7 @@ fun DetalleOrdenCompraScreen(
         mutableStateOf(false)
     }
 
-    /*
-     * CARGAR DETALLE
-     */
+
     suspend fun cargarDetalleOrdenCompra() {
 
         try {
@@ -122,9 +132,7 @@ fun DetalleOrdenCompraScreen(
         }
     }
 
-    /*
-     * CARGA INICIAL
-     */
+
     LaunchedEffect(docEntry) {
 
         cargarDetalleOrdenCompra()
@@ -139,9 +147,7 @@ fun DetalleOrdenCompraScreen(
             modifier = Modifier.fillMaxSize()
         ) {
 
-            /*
-             * ENCABEZADO
-             */
+
             ElevatedCard(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RectangleShape,
@@ -156,7 +162,12 @@ fun DetalleOrdenCompraScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
+                        .padding(
+                            start = 16.dp,
+                            end = 16.dp,
+                            top = 40.dp,
+                            bottom = 16.dp
+                        ),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
 
@@ -174,10 +185,10 @@ fun DetalleOrdenCompraScreen(
                     }
 
                     Text(
-                        text = "DETALLE ORDEN DE COMPRA",
+                        text = "Detalle Orden de Compra",
                         color = Color.White,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 22.sp,
+                        fontSize = 20.sp,
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -187,9 +198,7 @@ fun DetalleOrdenCompraScreen(
                 modifier = Modifier.height(12.dp)
             )
 
-            /*
-             * CONTENIDO
-             */
+
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -198,18 +207,17 @@ fun DetalleOrdenCompraScreen(
 
 
                 Text(
-                    text = "Orden de Compra: $docEntry",
+                    text = "Orden de Compra: $docNum",
                     fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center
                 )
 
                 Spacer(
                     modifier = Modifier.height(12.dp)
                 )
 
-                /*
-                 * LISTA DE DETALLE
-                 */
+
                 LazyColumn(
                     modifier = Modifier.weight(1f)
                 ) {
@@ -222,12 +230,15 @@ fun DetalleOrdenCompraScreen(
                                 .padding(
                                     horizontal = 4.dp,
                                     vertical = 5.dp
-                                ),
-
+                                )
+                                .clickable {
+                                    navController.navigate(
+                                        "stockItemOrdenCompra/${Uri.encode(item.ItemCode ?: "")}"
+                                    )
+                                },
                             elevation = CardDefaults.elevatedCardElevation(
                                 defaultElevation = 5.dp
                             ),
-
                             colors = CardDefaults.elevatedCardColors(
                                 containerColor = Color.White
                             )
@@ -237,11 +248,12 @@ fun DetalleOrdenCompraScreen(
                                 modifier = Modifier.padding(12.dp)
                             ) {
 
-                                /*
-                                 * ITEM
-                                 */
+
                                 Row(
-                                    modifier = Modifier.fillMaxWidth(),
+                                    modifier = Modifier
+                                              .fillMaxWidth()
+                                              .background(Color(0xFFE0E0E0))
+                                              .padding(horizontal = 8.dp, vertical = 6.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
 
@@ -253,7 +265,7 @@ fun DetalleOrdenCompraScreen(
                                     )
 
                                     Text(
-                                        text = "Línea ${item.OC_Linea}",
+                                        text = "Linea ${item.OC_Linea}",
                                         fontSize = 13.sp,
                                         fontWeight = FontWeight.Bold
                                     )
@@ -263,9 +275,7 @@ fun DetalleOrdenCompraScreen(
                                     modifier = Modifier.height(5.dp)
                                 )
 
-                                /*
-                                 * DESCRIPCIÓN
-                                 */
+
                                 Text(
                                     text = item.Dscription ?: "",
                                     fontSize = 14.sp
@@ -274,7 +284,6 @@ fun DetalleOrdenCompraScreen(
                                 Spacer(
                                     modifier = Modifier.height(8.dp)
                                 )
-
                                 /*
                                  * CANTIDADES
                                  */
@@ -292,7 +301,7 @@ fun DetalleOrdenCompraScreen(
                                         )
 
                                         Text(
-                                            text = item.CantidadOC.toString(),
+                                            text = item.CantidadOC.toInt().toString(),
                                             fontSize = 16.sp,
                                             fontWeight = FontWeight.Bold
                                         )
@@ -308,7 +317,7 @@ fun DetalleOrdenCompraScreen(
                                         )
 
                                         Text(
-                                            text = item.PendienteOC.toString(),
+                                            text = item.PendienteOC.toInt().toString(),
                                             fontSize = 16.sp,
                                             fontWeight = FontWeight.Bold
                                         )
@@ -334,6 +343,43 @@ fun DetalleOrdenCompraScreen(
                         }
                     }
                 }
+
+                Spacer(
+                    modifier = Modifier.height(12.dp)
+                )
+
+                Button(
+                    onClick = {
+                        navController.navigate("lecturaOrdenCompra/$docEntry/$docNum")
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .navigationBarsPadding()
+                        .height(55.dp),
+                    shape = RectangleShape,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF4FC3F7),
+                        contentColor = Color.White
+                    ),
+                    enabled = detalles.isNotEmpty()
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.QrCodeScanner,
+                        contentDescription = null,
+                        modifier = Modifier.size(22.dp)
+                    )
+
+                    Spacer(
+                        modifier = Modifier.width(8.dp)
+                    )
+
+                    Text(
+                        text = "INICIAR LECTURA",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp
+                    )
+                }
+
             }
         }
     }

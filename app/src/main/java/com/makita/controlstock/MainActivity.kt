@@ -148,6 +148,8 @@ import com.makita.controlstock.ui.screens.ProcesadoPickingScreen
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.style.TextAlign
 import com.makita.controlstock.ui.screens.DetalleOrdenCompraScreen
+import com.makita.controlstock.ui.screens.LecturaOrdenCompraScreen
+import com.makita.controlstock.ui.screens.StockItemOrdenCompraScreen
 
 
 val fechaHoy = LocalDate.now()
@@ -288,10 +290,14 @@ fun AppNavigation() {
         }
 
 
+
         composable(
-            route = "detalleOrdenCompra/{docEntry}",
+            route = "detalleOrdenCompra/{docEntry}/{docNum}",
             arguments = listOf(
                 navArgument("docEntry") {
+                    type = NavType.IntType
+                },
+                navArgument("docNum") {
                     type = NavType.IntType
                 }
             )
@@ -300,11 +306,36 @@ fun AppNavigation() {
             val docEntry =
                 backStackEntry.arguments?.getInt("docEntry") ?: 0
 
+            val docNum =
+                backStackEntry.arguments?.getInt("docNum") ?: 0
+
             DetalleOrdenCompraScreen(
                 navController = navController,
-                docEntry = docEntry
+                docEntry = docEntry,
+                docNum = docNum
             )
         }
+
+
+        composable(
+            route = "lecturaOrdenCompra/{docEntry}/{docNum}",
+            arguments = listOf(
+                navArgument("docEntry") { type = NavType.IntType },
+                navArgument("docNum") { type = NavType.IntType }
+            )
+        ) { backStackEntry ->
+
+            val docEntry = backStackEntry.arguments?.getInt("docEntry") ?: 0
+            val docNum = backStackEntry.arguments?.getInt("docNum") ?: 0
+
+            LecturaOrdenCompraScreen(
+                navController = navController,
+                docEntry = docEntry,
+                docNum = docNum
+            )
+        }
+
+
 
         /*
         composable("picking_recolecta") {
@@ -321,6 +352,28 @@ fun AppNavigation() {
 
             TrasladosScreen(navController, usuario)
         }
+
+
+
+
+        composable(
+            route = "stockItemOrdenCompra/{itemCode}",
+            arguments = listOf(
+                navArgument("itemCode") {
+                    type = NavType.StringType
+                }
+            )
+        ) { backStackEntry ->
+
+            val itemCode =
+                backStackEntry.arguments?.getString("itemCode") ?: ""
+
+            StockItemOrdenCompraScreen(
+                navController = navController,
+                itemCode = itemCode
+            )
+        }
+
 
         composable("consultas") {
             ConsultasScreen(navController)

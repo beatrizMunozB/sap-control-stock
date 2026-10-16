@@ -410,10 +410,8 @@ fun ConsultaStockItemScreen(navController: NavController) {
             trailingIcon = {
 
                 if (ubicacion.isNotEmpty()) {
-
                     IconButton(
                         onClick = {
-
                             ubicacion = ""
                             ubicacionActual = ""
                             lastInput = ""
