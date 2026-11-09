@@ -9,7 +9,7 @@ object
 
 RetrofitClient {
       /// fijarse en la ip que se cambia
-      private const val BASE_URL = "http://172.16.128.184:3024/"
+      private const val BASE_URL = "http://172.16.128.200:3024/"
     //private const val BASE_URL = "http://10.0.2.2:3024/"
 
     //private const val BASE_URL = "http://172.16.1.206:3024/"    // Servidor

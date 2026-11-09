@@ -147,9 +147,16 @@ import com.makita.controlstock.ui.screens.ConsultaPedidoClienteScreen
 import com.makita.controlstock.ui.screens.ProcesadoPickingScreen
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.style.TextAlign
+import com.makita.controlstock.ui.screens.ComprasRecepcionDetalleScreen
+import com.makita.controlstock.ui.screens.DetalleFacturaReservaScreen
 import com.makita.controlstock.ui.screens.DetalleOrdenCompraScreen
+import com.makita.controlstock.ui.screens.LecturaIngresoMercanciaScreen
 import com.makita.controlstock.ui.screens.LecturaOrdenCompraScreen
+import com.makita.controlstock.ui.screens.LecturaPosicionamientoRecepcionScreen
+import com.makita.controlstock.ui.screens.RevisarIngresoMercanciaScreen
 import com.makita.controlstock.ui.screens.StockItemOrdenCompraScreen
+import com.makita.controlstock.ui.screens.TrasladoInmediatoScreen
+import com.makita.controlstock.ui.theme.MakitaRed
 
 
 val fechaHoy = LocalDate.now()
@@ -316,6 +323,52 @@ fun AppNavigation() {
             )
         }
 
+        composable(
+            route = "detalleFacturaReserva/{docEntrySAP}/{docNum}",
+            arguments = listOf(
+                navArgument("docEntrySAP") {
+                    type = NavType.IntType
+                },
+                navArgument("docNum") {
+                    type = NavType.IntType
+                }
+            )
+        ) { backStackEntry ->
+
+            val docEntrySAP =
+                backStackEntry.arguments?.getInt("docEntrySAP") ?: 0
+
+            val docNum =
+                backStackEntry.arguments?.getInt("docNum") ?: 0
+
+            DetalleFacturaReservaScreen(
+                navController = navController,
+                docEntrySAP = docEntrySAP,
+                docNum = docNum
+            )
+        }
+
+
+        composable(
+            route = "revisarIngresoMercancia/{docEntrySAP}/{docNum}"
+        ) { backStackEntry ->
+
+            val docEntrySAP = backStackEntry.arguments
+                ?.getString("docEntrySAP")
+                ?.toIntOrNull() ?: 0
+
+            val docNum = backStackEntry.arguments
+                ?.getString("docNum")
+                ?.toIntOrNull() ?: 0
+
+            RevisarIngresoMercanciaScreen(
+                navController = navController,
+                docEntrySAP = docEntrySAP,
+                docNum = docNum
+            )
+        }
+
+
 
         composable(
             route = "lecturaOrdenCompra/{docEntry}/{docNum}",
@@ -331,6 +384,32 @@ fun AppNavigation() {
             LecturaOrdenCompraScreen(
                 navController = navController,
                 docEntry = docEntry,
+                docNum = docNum
+            )
+        }
+
+
+
+        composable(
+            route = "lecturaIngresoMercancia/{idCabecera}/{docEntrySAP}/{docNum}"
+        ) { backStackEntry ->
+
+            val idCabecera = backStackEntry.arguments
+                ?.getString("idCabecera")
+                ?.toIntOrNull() ?: 0
+
+            val docEntrySAP = backStackEntry.arguments
+                ?.getString("docEntrySAP")
+                ?.toIntOrNull() ?: 0
+
+            val docNum = backStackEntry.arguments
+                ?.getString("docNum")
+                ?.toIntOrNull() ?: 0
+
+            LecturaIngresoMercanciaScreen(
+                navController = navController,
+                idCabecera = idCabecera,
+                docEntrySAP = docEntrySAP,
                 docNum = docNum
             )
         }
@@ -616,6 +695,22 @@ fun AppNavigation() {
             )
         }
 
+        composable(
+            route = "lecturaPosicionamientoRecepcion/{idCabecera}",
+            arguments = listOf(
+                navArgument("idCabecera") {
+                    type = NavType.IntType
+                }
+            )
+        ) { backStackEntry ->
+
+            val idCabecera = backStackEntry.arguments?.getInt("idCabecera") ?: 0
+            LecturaPosicionamientoRecepcionScreen(
+                navController = navController,
+                idCabecera = idCabecera
+            )
+        }
+
 
 
 
@@ -629,8 +724,33 @@ fun AppNavigation() {
             val usuario = backStackEntry.arguments?.getString("usuario") ?: ""
             Log.d("*MAKITA*", "muestra valor de mostrarDialogoStock  -> Usuario: $usuario")
 
-            TerceraScreen(
+            TrasladoInmediatoScreen(
+                navController = navController,
                 usuario = usuario
+            )
+        }
+
+
+
+        composable(
+            route = "compras_recepcion_detalle/{absEntry}/{docNum}",
+            arguments = listOf(
+                navArgument("absEntry") {
+                    type = NavType.IntType
+                },
+                navArgument("docNum") {
+                    type = NavType.IntType
+                }
+            )
+        ) { backStackEntry ->
+
+            val absEntry = backStackEntry.arguments?.getInt("absEntry") ?: 0
+            val docNum = backStackEntry.arguments?.getInt("docNum") ?: 0
+
+            ComprasRecepcionDetalleScreen(
+                navController = navController,
+                absEntry = absEntry,
+                docNum = docNum
             )
         }
 
@@ -677,7 +797,7 @@ fun SplashScreen(navController: NavController) {
     )
 
     LaunchedEffect(Unit) {
-        delay(2000)
+        delay(1500)
         navController.navigate("login") {
             popUpTo("splash") { inclusive = true }
         }
@@ -743,12 +863,7 @@ fun SplashScreen(navController: NavController) {
                 color = Color(0xFFD32F2F),
                 letterSpacing = 2.sp
             )
-            Text(
-                text = "Cada movimiento, bajo control",
-                fontSize = 15.sp,
-                color = Color(0xFF9E9E9E),
-                letterSpacing = 1.sp
-            )
+
         }
     }
 }
@@ -904,7 +1019,7 @@ fun PantallaLogin(navController: NavController) {
                                                         Sesion.nombreResponsable = usuarioSap.NombreResponsable
 
 
-                                                        Log.d("*MAKITA*", " usuarui $usuarioSap.NombreResponsable ")
+                                                        Log.d("*MAKITA*", " usuario $usuarioSap.NombreResponsable  bodega $usuarioSap.WhsCode " )
 
                                                         passwordFocusRequester.requestFocus()
 
@@ -1264,6 +1379,9 @@ fun SecondScreen(navController: NavController) {
             )
 
 
+
+
+
             IconButton(
                 onClick = {
                     mostrarDialogoImpresora = true
@@ -1279,19 +1397,46 @@ fun SecondScreen(navController: NavController) {
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        Row(
+        Column(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            horizontalAlignment = Alignment.Start
         ) {
 
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement =Arrangement.Start
+            ) {
+                Text(
+                    text = "Usuario SAP: ",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Normal
+                )
 
-            Text(
-                text = "Usuario $usuario",
-                fontSize = 16.sp,
-                textAlign = TextAlign.Center,
-                fontWeight = FontWeight.Normal
-            )
+                Text(
+                    text = usuario,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MakitaRed
+                )
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Start
+            ) {
+                Text(
+                    text = "Bodega Asignada: ",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Normal
+                )
+
+                Text(
+                    text = Sesion.bodega,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MakitaRed
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(18.dp))
@@ -1457,7 +1602,7 @@ fun CardOpcion(opcion: OpcionDashboard, navController: NavController) {
 
 
 
-
+/*
 @Composable
 fun TerceraScreen(usuario: String) {
 
@@ -1947,77 +2092,89 @@ fun TerceraScreen(usuario: String) {
     }
 
     Surface(modifier = Modifier.fillMaxSize()) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(WindowInsets.statusBars.asPaddingValues())
-                .padding(16.dp)
+        Column( modifier = Modifier.fillMaxSize()
         ) {
 
 
-            Column(
-                modifier = Modifier.fillMaxWidth()
+            ElevatedCard(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RectangleShape,
+                elevation = CardDefaults.elevatedCardElevation(
+                    defaultElevation = 8.dp
+                ),
+                colors = CardDefaults.elevatedCardColors(
+                    containerColor = Color(0xFF00695C)
+                )
             ) {
-
-                Button(
-                    onClick = {
-                        mostrarCajaLectura = !mostrarCajaLectura
-                        lecturaIniciada = true
-                        modoLectura = ModoLectura.ORIGEN
-                    },
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(70.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFFF9800),
-                        contentColor = Color.Black
-                    )
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.QrCodeScanner,
-                        contentDescription = "Escanear",
-                        modifier = Modifier.size(32.dp),
-                        tint = Color.Red
-                    )
-
-                    Spacer(modifier = Modifier.width(8.dp))
-
-                    Text(
-                        "INICIAR LECTURA",
-                        fontWeight = FontWeight.Bold,
-                        color = Color.Black
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Button(
-                    onClick = { obtenerPendientesdia()
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(50.dp),
-                    shape = RectangleShape,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFE65100),
-                        contentColor = Color.White
-                    )
+                        .padding(8.dp)
                 ) {
 
-                    Icon(
-                        imageVector = Icons.Default.History,
-                        contentDescription = "Transferencias",
-                        modifier = Modifier.size(24.dp)
-                    )
+                    Button(
+                        onClick = {
+                            mostrarCajaLectura = !mostrarCajaLectura
+                            lecturaIniciada = true
+                            modoLectura = ModoLectura.ORIGEN
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(60.dp),
+                        shape = RectangleShape,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFFF9800),
+                            contentColor = Color.White
+                        ),
+                        elevation = ButtonDefaults.buttonElevation(
+                            defaultElevation = 0.dp
+                        )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.QrCodeScanner,
+                            contentDescription = "Escanear",
+                            modifier = Modifier.size(32.dp),
+                            tint = Color.Red
+                        )
 
-                    Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
 
-                    Text(
-                        "VER ULTIMAS TRANSFERENCIAS",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 11.sp
-                    )
+                        Text(
+                            "INICIAR LECTURA",
+                            fontWeight = FontWeight.Bold,
+                            color = Color.Black
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Button(
+                        onClick = {
+                            obtenerPendientesdia()
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(50.dp),
+                        shape = RectangleShape,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFE65100),
+                            contentColor = Color.White
+                        )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.History,
+                            contentDescription = "Transferencias",
+                            modifier = Modifier.size(24.dp)
+                        )
+
+                        Spacer(modifier = Modifier.width(8.dp))
+
+                        Text(
+                            "VER ULTIMAS TRANSFERENCIAS",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 11.sp
+                        )
+                    }
                 }
             }
 
@@ -2955,9 +3112,7 @@ fun TerceraScreen(usuario: String) {
 
 
 }
-
-
-
+*/
 
 
 

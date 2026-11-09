@@ -136,6 +136,7 @@ import com.makita.controlstock.mostrarDialogo
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import com.makita.controlstock.data.network.SalidaMercanciaResponse
+import com.makita.controlstock.session.Sesion
 
 
 @Composable
@@ -443,10 +444,11 @@ fun TrasladosEntradaScreen(usuario: String) {
     }
 
 
-    // -------- CARGA BODEGA POR DEFECTO --------
+    // -------- CARGA BODEGA que esta asignado el usuario--------
+
     LaunchedEffect(Unit) {
         try {
-            val response = apiService.obtenerBodegaOrigen()
+            val response = apiService.obtenerBodegaOrigen(Sesion.bodega)
             val def = response.firstOrNull { it.IsDefault == 1 }
             if (def != null) {
                 bodegaOrigen = def.WhsCode

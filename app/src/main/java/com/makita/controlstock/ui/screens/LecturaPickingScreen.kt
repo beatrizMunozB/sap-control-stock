@@ -163,6 +163,10 @@ fun LecturaPickingScreen(
     var volverAItem by remember {
         mutableStateOf(false)
     }
+    var tipoItem by remember { mutableStateOf("") }
+    var cantidadPendienteArticulo by remember { mutableStateOf(0.0) }
+    var cantidadEtiquetaHerramienta by remember { mutableStateOf<Long?>(null) }
+    var cantidadValidada by remember { mutableStateOf(false) }
 
 
     fun procesarCantidad() {
@@ -867,7 +871,7 @@ fun LecturaPickingScreen(
                                     else -> {
 
                                         mensajeError2 =
-                                            "Tipo de artículo no reconocido: " +
+                                            "Tipo de item no reconocido: " +
                                                     gTipoItem.trim()
 
                                         showDialogCantidad = true
@@ -1164,7 +1168,7 @@ fun LecturaPickingScreen(
                         ) {
 
                             Text(
-                                text = "DETALLE ARTICULO",
+                                text = "DETALLE ITEM",
                                 color = Color.White,
                                 fontSize = 13.sp
                             )
@@ -2561,7 +2565,6 @@ fun LecturaPickingScreen(
                         }
                     }
                 }
-
 
 
 

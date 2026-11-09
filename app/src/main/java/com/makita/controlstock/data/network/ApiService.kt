@@ -2,6 +2,7 @@ package com.makita.controlstock.data.network
 
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.vector.ImageVector
 import com.google.gson.annotations.SerializedName
 import retrofit2.Response
 import retrofit2.http.Body
@@ -142,9 +143,9 @@ data class UbicacionResponse(
 
 data class ObtenerStockUbicacionResponse(
     val status: Int,
-    val data: List<UbicacionResponse>
+    val data: List<UbicacionResponse>? = null,
+    val error: String? = null
 )
-
 
 data class PendientesResponse(
 
@@ -365,6 +366,8 @@ data class RegistrarPickingCapturaRequest(
     val barCode: String?,
     val usuario: String
 )
+
+
 
 
 
@@ -876,7 +879,10 @@ data class FacturaReservaResponse(
     val CardCode: String?,
     val CardName: String?,
     val DocTotal: String?,
-    val DocStatus: String?
+    val DocStatus: String?,
+    val U_BL: String?,
+    val U_Contenedor: String?,
+    val U_InvoiceNo: String?
 )
 
 data class FacturasReservaApiResponse(
@@ -895,9 +901,12 @@ data class FacturaReservaDetalleResponse(
     val LineNum: Int,
     val ItemCode: String?,
     val Dscription: String?,
-    val Quantity: String?,
-    val OpenQty: String?,
-    val WhsCode: String?
+    val Quantity: Double?,
+    val OpenQty: Double?,
+    val WhsCode: String?,
+    val CantidadCapturada: Double? = 0.0 ,
+    val ItmsGrpCod: String?,
+    val ItmsGrpNam: String?
 )
 
 data class FacturaReservaDetalleApiResponse(
@@ -925,9 +934,514 @@ data class DetalleIngresoMercanciaSQLResponse(
 )
 
 
+data class CrearIngresoMercanciaCabeceraRequest(
+    val docEntrySAP: Int,
+    val docNumSAP: Int,
+    val cardCode: String?,
+    val cardName: String?,
+    val usuario: String?
+)
+
+data class CrearIngresoMercanciaCabeceraData(
+    val idCabecera: Int
+)
+
+data class CrearIngresoMercanciaCabeceraApiResponse(
+    val success: Boolean,
+    val message: String?,
+    val data: CrearIngresoMercanciaCabeceraData?
+)
+
+data class CrearIngresoMercanciaDetalleRequest(
+    val idCabecera: Int,
+    val detalles: List<FacturaReservaDetalleResponse>
+)
+
+data class CrearIngresoMercanciaDetalleApiResponse(
+    val success: Boolean,
+    val message: String?,
+    val data: Any? = null
+)
+
+data class PrimeraBodegaIngresoMercanciaResponse(
+    val success: Boolean,
+    val data: PrimeraBodegaIngresoMercanciaData?,
+    val message: String?
+)
+
+data class PrimeraBodegaIngresoMercanciaData(
+    @SerializedName("WhsCode")
+    val whsCode: String
+)
+
+data class ValidarBodegaIngresoMercanciaRequest(
+    val idCabecera: Int,
+    val whsCode: String
+)
+
+data class ValidarArticuloIngresoMercanciaRequest(
+    val idCabecera: Int,
+    val whsCode: String,
+    val itemCode: String
+)
+
+data class ValidacionIngresoMercanciaResponse(
+    val success: Boolean,
+    val valida: Boolean,
+    val message: String
+)
+
+data class ValidarArticuloIngresoMercanciaResponse(
+    val success: Boolean,
+    val valida: Boolean,
+    val data: ArticuloIngresoMercanciaData?,
+    val message: String
+)
+
+data class ArticuloIngresoMercanciaData(
+    @SerializedName("Id")
+    val id: Int,
+
+    @SerializedName("LineNum")
+    val lineNum: Int,
+
+    @SerializedName("ItemCode")
+    val itemCode: String,
+
+    @SerializedName("ItemName")
+    val itemName: String?,
+
+    @SerializedName("WhsCode")
+    val whsCode: String,
+
+    @SerializedName("CantidadFactura")
+    val cantidadFactura: Double,
+
+    @SerializedName("CantidadPendiente")
+    val cantidadPendiente: Double,
+
+    @SerializedName("CantidadCapturada")
+    val cantidadCapturada: Double,
+
+    @SerializedName("Estado")
+    val estado: String
+)
+
+data class RegistrarCapturaIngresoMercanciaRequest(
+    val idDetalle: Int,
+    val numeroSerie: String? = null,
+    val cantidad: Int,
+    val whsCode: String,
+    val barCode: String? = null,
+    val usuario: String
+)
+
+data class RegistrarCapturaIngresoMercanciaApiResponse(
+    val success: Boolean,
+    val message: String?,
+    val data: RegistrarCapturaIngresoMercanciaData?
+)
+
+data class RegistrarCapturaIngresoMercanciaData(
+    val idCaptura: Int,
+    val idDetalle: Int,
+    val itemCode: String,
+    val cantidadCapturada: Int,
+    val cantidadPendiente: Int,
+    val estado: String
+)
+
+data class ObtenerIngresosCapturadosResponse(
+    val success: Boolean,
+    val data: List<IngresoCapturadoResponse> = emptyList(),
+    val message: String? = null
+)
+
+data class IngresoCapturadoResponse(
+    val IdCabecera: Int,
+    val DocEntrySAP: Int,
+    val DocNumSAP: Int? = null,
+
+    val IdDetalle: Int,
+    val LineNum: Int,
+    val ItemCode: String,
+    val ItemName: String?,
+    val Bodega: String?,
+
+    val CantidadFactura: Double,
+    val CantidadCapturada: Double,
+    val CantidadPendiente: Double,
+    val EstadoDetalle: String?,
+
+    val IdCaptura: Int,
+    val NumeroSerie: String?,
+    val Cantidad: Int,
+    val WhsCode: String?,
+    val BarCode: String?,
+    val Usuario: String,
+    val FechaCaptura: String,
+    val Procesado: Boolean
+)
+
+data class EliminarCapturaIngresoMercanciaResponse(
+    val success: Boolean,
+    val message: String?,
+    val data: EliminarCapturaIngresoMercanciaData?
+)
+
+data class EliminarCapturaIngresoMercanciaData(
+    val idCaptura: Int,
+    val cantidadEliminada: Double,
+    val cantidadCapturada: Double,
+    val cantidadPendiente: Double,
+    val estado: String
+)
+
+data class EnviarIngresoMercanciaASAPResponse(
+    val success: Boolean,
+    val message: String?,
+    val data: EnviarIngresoMercanciaASAPData? = null
+)
+
+data class EnviarIngresoMercanciaASAPData(
+    val idCabecera: Int,
+    val docEntrySAP: Int,
+    val docNumSAP: Int,
+    val cantidadLineas: Int,
+    val yaExistia: Boolean? = false
+)
+
+data class ObtenerStockItemResponse(
+    val status: Int,
+    val data: List<UbicacionResponse>? = null,
+    val error: String? = null
+)
+
+data class ObtenerStockItemPorBodegaResponse(
+    val status: Int,
+    val data: List<StockItemBodegaResponse>? = null,
+    val error: String? = null
+)
+
+data class StockItemBodegaResponse(
+    val ItemCode: String?,
+    val ItemName: String?,
+    val WhsCode: String?,
+    val Stock: Double?,
+    val Grupo:  String?,
+    val NombreGrupo:  String?,
+    val CodigoBarra :  String?
+)
+
+
+
+data class BodegaLocal(
+    @SerializedName("WhsCode")
+    val whsCode: String,
+
+    @SerializedName("WhsName")
+    val whsName: String,
+
+    @SerializedName("BinActivat")
+    val binActivat: String
+)
+
+data class BodegasLocalResponse(
+    val success: Boolean,
+    val data: List<BodegaLocal>
+)
+
+data class OpcionDashboard(
+    val titulo: String,
+    val subtitulo: String,
+    val icono: ImageVector,
+    val ruta: String,
+    val descripcionAyuda: String = ""
+)
+
+data class EnviarStockBodegaRequest(
+    val bodega: String,
+    val detalle: List<StockItemBodegaResponse>
+)
+
+data class EnviarStockBodegaResponse(
+    val status: Int,
+    val mensaje: String,
+    val bodega: String? = null,
+    val totalItems: Int? = null
+)
+
+
+data class ValidarNumeroBLResponse(
+    val success: Boolean,
+    val data: List<ValidarNumeroBLDetalle>?
+)
+
+data class ValidarNumeroBLDetalle(
+    val DocEntry: Int,
+    val DocNum: Int,
+    val CardCode: String?,
+    val CardName: String?,
+    val NumAtCard: String?,
+    val U_BL: String?
+)
+
+
+data class RecepcionPendienteResponse(
+    val success: Boolean,
+    val data: List<RecepcionPendiente>?,
+    val message: String? = null
+)
+
+data class RecepcionPendiente(
+    val AbsEntry: Int,
+    val Name: String?,
+    val OwnerCode: String?,
+    val OwnerName: String?,
+    val PickDate: String?,
+    val CardCode: String?,
+    val CardName: String?,
+    val LicTradNum: String?,
+    val DocNum: Int,
+    val Tipo: String?,
+    val ItemsDuplicados: String?,
+    val NumLlamada: Int
+)
+
+
+data class ComprasRecepcionDetalleResponse(
+    val success: Boolean,
+    val data: List<ComprasRecepcionDetalle>
+)
+
+data class ComprasRecepcionDetalle(
+    val DocEntry: Int,
+    val Name: String,
+    val OwnerCode: String?,
+    val OwnerName: String?,
+    val ItemCode: String,
+    val Dscription: String?,
+    val ManBtchNum: String?,
+    val ManSerNum: String?,
+    val FromWhsCod: String,
+    val BinActivat: String?,
+    val Quantity: Double?,
+    val OpenQty: Double,
+    val RelQtty: Double,
+    val BinCode: String?,
+    val BinCodeEntry: Int?,
+    val BarCodeBin: String?,
+    val OrderEntry: Int,
+    val OrderLine: Int,
+    val PickEntry: Int,
+    val BatToWarehouse: String?,
+    val DocType: String,
+    val DocStatus: String,
+    val ObjType: String,
+    val DocNum: Int,
+    val AltSortCod: String?,
+    val Price: Double?,
+    val QuantityRecep: Double?,
+    val FolioNum: Int,
+    val OrdenCompra: Int,
+    val ArticulosUnidad: Double?,
+    val QuantityInv: Double?,
+    val UMedidaInv: String,
+    val UMedida: String?
+)
+
+data class IniciarPosicionamientoRecepcionRequest(
+    val absEntry: Int,
+    val docNum: Int,
+    val usuario: String?
+)
+
+data class IniciarPosicionamientoRecepcionResponse(
+    val success: Boolean,
+    val message: String,
+    val data: IniciarPosicionamientoRecepcionData?
+)
+
+data class IniciarPosicionamientoRecepcionData(
+    val idCabecera: Int,
+    val absEntry: Int,
+    val docNum: Int,
+    val totalArticulos: Int?
+)
+
+
+data class ObtenerPosicionamientoRecepcionDetalleResponse(
+    val success: Boolean,
+    val data: List<PosicionamientoRecepcionDetalle>
+)
+
+data class PosicionamientoRecepcionDetalle(
+    val Id: Int,
+    val IdCabecera: Int,
+    val DocEntry: Int,
+    val ItemCode: String,
+    val BodegaOrigen: String,
+    val BatToWarehouse: String?,
+    val CantidadPendiente: Double,
+    val CantidadCapturada: Double,
+    val BinCode: String?,
+    val BinCodeEntry: Int?,
+    val OrderEntry: Int?,
+    val OrderLine: Int?,
+    val PickEntry: Int?,
+    val Estado: String,
+    val Dscription: String?
+)
+
+data class RegistrarPosicionamientoRecepcionRequest(
+    val idDetalle: Int,
+    val itemCode: String,
+    val codigoLeido: String?,
+    val cantidad: Double,
+    val usuario: String?
+)
+
+data class RegistrarPosicionamientoRecepcionResponse(
+    val success: Boolean,
+    val message: String,
+    val data: RegistrarPosicionamientoRecepcionData?
+)
+
+data class RegistrarPosicionamientoRecepcionData(
+    val idDetalle: Int,
+    val itemCode: String,
+    val cantidadCapturada: Double,
+
+    val cantidadPendiente: Double,
+    val estado: String
+)
+
+
+data class ConfirmarUbicacionPosicionamientoRecepcionRequest(
+    val idDetalle: Int,
+    val ubicacion: String
+)
+
+data class ConfirmarUbicacionPosicionamientoRecepcionResponse(
+    val success: Boolean,
+    val message: String,
+    val data: ConfirmarUbicacionPosicionamientoRecepcionData?
+)
+
+data class ConfirmarUbicacionPosicionamientoRecepcionData(
+    val idDetalle: Int,
+    val itemCode: String,
+    val bodegaDestino: String,
+    val binCode: String,
+    val binCodeEntry: Int
+)
+
+
+
 
 interface ApiService
 {
+
+    @POST("api/registrarPosicionamientoRecepcion")
+    suspend fun registrarPosicionamientoRecepcion(
+        @Body request: RegistrarPosicionamientoRecepcionRequest
+    ): RegistrarPosicionamientoRecepcionResponse
+
+
+
+    @POST("api/confirmarUbicacionPosicionamientoRecepcion")
+    suspend fun confirmarUbicacionPosicionamientoRecepcion(
+        @Body request: ConfirmarUbicacionPosicionamientoRecepcionRequest
+    ): ConfirmarUbicacionPosicionamientoRecepcionResponse
+
+
+    @GET("api/obtenerPosicionamientoRecepcionDetalle/{idCabecera}")
+    suspend fun obtenerPosicionamientoRecepcionDetalle(
+        @Path("idCabecera") idCabecera: Int
+    ): ObtenerPosicionamientoRecepcionDetalleResponse
+
+
+    @POST("api/iniciarPosicionamientoRecepcion")
+    suspend fun iniciarPosicionamientoRecepcion(
+        @Body request: IniciarPosicionamientoRecepcionRequest
+    ): IniciarPosicionamientoRecepcionResponse
+
+    @GET("api/obtenerComprasRecepcionDetalle/{absEntry}")
+    suspend fun obtenerComprasRecepcionDetalle(
+        @Path("absEntry") absEntry: Int
+    ): ComprasRecepcionDetalleResponse
+
+    @GET("api/obtener-recepciones-pendientes")
+    suspend fun obtenerRecepcionesPendientes(
+        @Query("docNum") docNum: Int? = null
+    ): RecepcionPendienteResponse
+
+    @GET("api/obtenerStockItemBod01/{item}")
+    suspend fun obtenerStockItemBod01(
+        @Path("item") item: String
+    ): ObtenerStockItemPorBodegaResponse
+
+
+    @GET("validarNumeroBL")
+    suspend fun validarNumeroBL(
+        @Query("numeroBL") numeroBL: String
+    ): ValidarNumeroBLResponse
+
+    @POST("api/enviar-stock-bodega")
+    suspend fun enviarStockBodega(
+        @Body request: EnviarStockBodegaRequest
+    ): EnviarStockBodegaResponse
+
+    @GET("api/obtenerBodegasLocal")
+    suspend fun obtenerBodegasLocal(): BodegasLocalResponse
+
+    @GET("api/obtenerStockItemPorBodega")
+    suspend fun obtenerStockItemPorBodega(@Query("bodega") bodega: String): ObtenerStockItemPorBodegaResponse
+
+    @POST("api/enviarIngresoMercanciaASAP/{docEntrySAP}")
+    suspend fun enviarIngresoMercanciaASAP(
+        @Path("docEntrySAP") docEntrySAP: Int
+    ): EnviarIngresoMercanciaASAPResponse
+
+    @DELETE("api/eliminarCapturaIngresoMercancia/{idCaptura}")
+    suspend fun eliminarCapturaIngresoMercancia(
+        @Path("idCaptura") idCaptura: Int
+    ): EliminarCapturaIngresoMercanciaResponse
+
+    @GET("api/obtenerIngresosCapturados/{docEntrySAP}")
+    suspend fun obtenerIngresosCapturados(
+        @Path("docEntrySAP") docEntrySAP: Int
+    ): ObtenerIngresosCapturadosResponse
+
+    @POST("api/registrarCapturaIngresoMercancia")
+    suspend fun registrarCapturaIngresoMercancia(
+        @Body request: RegistrarCapturaIngresoMercanciaRequest
+    ): RegistrarCapturaIngresoMercanciaApiResponse
+
+    @GET("api/obtenerPrimeraBodegaIngresoMercancia/{idCabecera}")
+    suspend fun obtenerPrimeraBodegaIngresoMercancia(
+        @Path("idCabecera") idCabecera: Int
+    ): PrimeraBodegaIngresoMercanciaResponse
+
+    @POST("api/validarBodegaIngresoMercancia")
+    suspend fun validarBodegaIngresoMercancia(
+        @Body request: ValidarBodegaIngresoMercanciaRequest
+    ): ValidacionIngresoMercanciaResponse
+
+    @POST("api/validarArticuloIngresoMercancia")
+    suspend fun validarArticuloIngresoMercancia(
+        @Body request: ValidarArticuloIngresoMercanciaRequest
+    ): ValidarArticuloIngresoMercanciaResponse
+
+    @POST("api/crearIngresoMercanciaCabecera")
+    suspend fun crearIngresoMercanciaCabecera(
+        @Body request: CrearIngresoMercanciaCabeceraRequest
+    ): CrearIngresoMercanciaCabeceraApiResponse
+
+    @POST("api/crearIngresoMercanciaDetalle")
+    suspend fun crearIngresoMercanciaDetalle(
+        @Body request: CrearIngresoMercanciaDetalleRequest
+    ): CrearIngresoMercanciaDetalleApiResponse
 
     @GET("api/obtenerDetalleIngresoMercanciaSQL/{docEntrySAP}")
     suspend fun obtenerDetalleIngresoMercanciaSQL(
@@ -939,12 +1453,12 @@ interface ApiService
         @Path("docEntrySAP") docEntrySAP: Int
     ): FacturaReservaDetalleApiResponse
 
-
     @GET("api/obtenerFacturasReserva")
     suspend fun obtenerFacturasReserva(
         @Query("numeroFactura") numeroFactura: String = "",
         @Query("socioNegocio") socioNegocio: String = "",
-        @Query("numAtCard") numAtCard: String = ""
+        @Query("numAtCard") numAtCard: String = "",
+        @Query("numeroBL") numeroBL: String = ""
     ): FacturasReservaApiResponse
 
     @POST("api/registrarCapturaOrdenCompra")
@@ -988,7 +1502,10 @@ interface ApiService
 
 
     @GET("api/obtener-bodega-origen")
-    suspend fun obtenerBodegaOrigen(): List<BodegaOrigenResponse>
+    suspend fun obtenerBodegaOrigen(
+        @Query("bodega") bodega: String? = null
+    ): List<BodegaOrigenResponse>
+
 
     @GET("api/validar-ubicacion/{bodega}/{ubicacion}")
     suspend fun validarUbicacionBodega(
@@ -1026,7 +1543,7 @@ interface ApiService
     @GET("api/obtener-stock-item/{item}")
     suspend fun obtenerStockItem(
         @Path("item") item: String
-    ): ObtenerStockUbicacionResponse
+    ): ObtenerStockItemResponse
 
 
     @GET("api/validar-cantidad-ubicacion/{item}/{bodega}/{ubicacion}")
@@ -1208,8 +1725,6 @@ interface ApiService
         @Path("item") Item: String
     ):  String
 
-
-
     @POST("api/iniciar-picking-lectura/{absEntry}")
     suspend fun iniciarPickingLectura(
         @Path("absEntry") absEntry: Int,
@@ -1292,6 +1807,8 @@ interface ApiService
     suspend fun obtenerUsuarioSap(
         @Path("usuario") usuario: String
     ): Response<UsuarioSapResponse>
+
+
 
 
     

@@ -3,6 +3,8 @@ package com.makita.controlstock.ui.screens
 import android.text.Layout
 import android.util.Log
 import android.widget.Toast
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -10,6 +12,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardActions
@@ -56,6 +59,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -63,6 +67,11 @@ import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.material3.ElevatedCard
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.Arrangement
+
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -85,6 +94,8 @@ fun ConsultaStockScreen(navController: NavController) {
     val context = LocalContext.current
     var mensajeError by remember { mutableStateOf("") }
     var secondTextFieldValue by remember { mutableStateOf("") }
+
+
 
     fun validarItem(UbicacionIngresado: String) {
 
@@ -213,34 +224,75 @@ fun ConsultaStockScreen(navController: NavController) {
     }
 
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
+    @Composable
+    fun RowDetalleStock(
+        titulo: String,
+        valor: String?
     ) {
-
         Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.Top
         ) {
-
-            IconButton(
-                onClick = {
-                    navController.popBackStack()
-                }
-            ) {
-                Icon(
-                    imageVector = Icons.Default.ArrowBack,
-                    contentDescription = "Volver"
-                )
-            }
+            Text(
+                text = "$titulo:",
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.width(150.dp)
+            )
 
             Text(
-                text = "Stock por Ubicacion",
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold
+                text = valor.orEmpty(),
+                fontSize = 14.sp,
+                modifier = Modifier.weight(1f)
             )
         }
+    }
+
+
+
+    Column(
+        modifier = Modifier.fillMaxSize()
+    ) {
+
+
+        ElevatedCard(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 16.dp),
+            shape = RectangleShape,
+            elevation = CardDefaults.elevatedCardElevation(
+                defaultElevation = 8.dp
+            ),
+            colors = CardDefaults.elevatedCardColors(
+                containerColor = Color(0xFF00695C),
+                contentColor = Color.White
+            )
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp)
+            ) {
+                IconButton(
+                    onClick = {
+                        navController.popBackStack()
+                    }
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ArrowBack,
+                        contentDescription = "Volver"
+                    )
+                }
+
+                Text(
+                    text = "Stock por Ubicacion",
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+
 
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -251,87 +303,79 @@ fun ConsultaStockScreen(navController: NavController) {
 
         OutlinedTextField(
             value = ubicacion,
-            onValueChange = {
-
-                val cleanedText = it
+            onValueChange = { texto ->
+                val cleanedText = texto
                     .replace("\n", "")
                     .replace("\r", "")
                     .replace("\t", "")
-                    .trim()
                     .uppercase()
+                    .take(20)
 
-                val valorLimitado =
-                    if (cleanedText.length > 20)
-                        cleanedText.substring(0, 20)
-                    else
-                        cleanedText
-
-                ubicacion = valorLimitado
-                ubicacionActual = valorLimitado
-
-                if (valorLimitado != lastInput) {
-
-                    lastInput = valorLimitado
-
-                    if (valorLimitado.isNotEmpty()) {
-
-                        Log.d(
-                            "*MAKITA*",
-                            "VALIDANDO"
-                        )
-
-                        validarItem(valorLimitado)
-                    }
-                }
+                ubicacion = cleanedText
+                ubicacionActual = cleanedText
             },
-
             label = {
-                Text("Escanear Ubicacion")
+                Text("Ubicación")
             },
-
             placeholder = {
-                Text("Escanear Ubicacion")
+                Text("Escanear o digitar ubicación")
             },
-
             leadingIcon = {
                 Icon(
                     imageVector = Icons.Default.QrCodeScanner,
-                    contentDescription = "Escanear"
+                    contentDescription = "Escanear ubicación"
                 )
             },
-
             trailingIcon = {
-
-                if (ubicacion.isNotEmpty()) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (ubicacion.isNotEmpty()) {
+                        IconButton(
+                            onClick = {
+                                ubicacion = ""
+                                ubicacionActual = ""
+                                lastInput = ""
+                                ubicacionFocusRequester.requestFocus()
+                                keyboardController?.hide()
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Clear,
+                                contentDescription = "Limpiar ubicación"
+                            )
+                        }
+                    }
 
                     IconButton(
                         onClick = {
-                            ubicacion = ""
-                            ubicacionActual = ""
-                            lastInput = ""
+                            keyboardController?.hide()
+
+                            if (ubicacion.isNotBlank()) {
+                                lastInput = ubicacion
+                                Log.d("MAKITA", "VALIDANDO UBICACIÓN: $ubicacion")
+                                validarItem(ubicacion)
+                            }
                         }
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Clear,
-                            contentDescription = "Borrar texto"
+                            imageVector = Icons.Default.PlayArrow,
+                            contentDescription = "Validar ubicación"
                         )
                     }
                 }
             },
-
             singleLine = true,
-
             keyboardOptions = KeyboardOptions(
-                imeAction = ImeAction.Search,
-                keyboardType = KeyboardType.Text
+                keyboardType = KeyboardType.Text,
+                imeAction = ImeAction.Search
             ),
-
             modifier = Modifier
-                .width(300.dp)
+                .padding(horizontal = 16.dp)
+                .fillMaxWidth()
                 .height(60.dp)
                 .focusRequester(ubicacionFocusRequester)
                 .onFocusChanged { focusState ->
-
                     if (focusState.isFocused) {
                         keyboardController?.hide()
                     }
@@ -349,58 +393,62 @@ fun ConsultaStockScreen(navController: NavController) {
 
                 item {
 
+
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(vertical = 6.dp),
-                        elevation = CardDefaults.cardElevation(4.dp)
+                        elevation = CardDefaults.cardElevation(4.dp),
+                        shape = RoundedCornerShape(8.dp)
                     ) {
-
                         Column(
-                            modifier = Modifier.padding(16.dp)
+                            modifier = Modifier.fillMaxWidth()
                         ) {
 
-                            Text(
-                                text = "Item: ${item.item}",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 18.sp
-                            )
+                            // Encabezado gris
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(Color(0xFFE0E0E0))
+                                    .padding(horizontal = 12.dp, vertical = 10.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Item: ${item.item}",
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.weight(1f)
+                                    )
 
-                            Spacer(
-                                modifier = Modifier.height(4.dp)
-                            )
+                                    Text(
+                                        text = "Cantidad: ${item.cantidad.toDouble().toInt()}",
+                                        fontSize = 15.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
 
-                            Text(
-                                text = "Descripcion       : ${item.descripcion}"
-                            )
-
-                            Text(
-                                text = "Ubicación         : ${item.ubicacion}"
-                            )
-
-                            Text(
-                                text = "Bodega            : ${item.bodega}"
-                            )
-
-                            Text(text = "Cantidad          : ${item.cantidad.toDouble().toInt()}")
-
-                            Text(
-                                text = "Estado            : ${item.estado}"
-                            )
-
-                            Text(
-                                text = "Ubicacion estandar: ${item.ubicacionStandar}"
-                            )
-
-                            Text(
-                                text = "Primera ubicacion : ${item.primeraUbicacion}"
-                            )
-
-                            Text(
-                                text = "BarCode           : ${item.BarCode}"
-                            )
+                            // Detalle del item
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(12.dp),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                RowDetalleStock("Descripción", item.descripcion)
+                                RowDetalleStock("Ubicación", item.ubicacion)
+                                RowDetalleStock("Bodega", item.bodega)
+                                RowDetalleStock("Estado", item.estado)
+                                RowDetalleStock("Ubicación estándar", item.ubicacionStandar)
+                                RowDetalleStock("Primera ubicación", item.primeraUbicacion)
+                                RowDetalleStock("BarCode", item.BarCode)
+                            }
                         }
                     }
+
                 }
             }
         }
@@ -408,27 +456,6 @@ fun ConsultaStockScreen(navController: NavController) {
 
         Spacer(modifier = Modifier.height(10.dp))
 
-
-        TextField(
-            value = secondTextFieldValue,
-            onValueChange = {},
-            readOnly = true,
-            textStyle = LocalTextStyle.current.copy(
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold
-            ),
-            modifier = Modifier
-                .width(320.dp)
-                .height(80.dp),
-            colors = TextFieldDefaults.colors(
-                focusedContainerColor = Color(0xFFF5F5F5),
-                unfocusedContainerColor = Color(0xFFF5F5F5),
-                focusedTextColor = Color(0xFF424242),
-                unfocusedTextColor = Color(0xFF424242),
-                focusedIndicatorColor = Color(0xFF9E9E9E),
-                unfocusedIndicatorColor = Color(0xFFBDBDBD)
-            )
-        )
 
 
         if (mostrarDialogoWifiError) {
@@ -492,4 +519,29 @@ fun mostrarDialogo3(
             }
         }
     )
+}
+
+
+@Composable
+fun RowDetalleStock(
+    titulo: String,
+    valor: String?
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.Top
+    ) {
+        Text(
+            text = "$titulo:",
+            fontSize = 14.sp,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.width(150.dp)
+        )
+
+        Text(
+            text = valor.orEmpty(),
+            fontSize = 14.sp,
+            modifier = Modifier.weight(1f)
+        )
+    }
 }

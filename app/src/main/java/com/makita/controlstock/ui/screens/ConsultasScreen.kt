@@ -33,11 +33,36 @@ import com.makita.controlstock.model.OpcionDashboard
 fun ConsultasScreen(navController: NavController) {
 
     val opciones = listOf(
-        OpcionDashboard("Stock por Ubicacion", "Consulta de stock por ubicacion", Icons.Default.Place, "consulta_ubicacion"),
-        OpcionDashboard("Stock por Item", "Consulta de stock por Item", Icons.Default.Search, "consulta_stock"),
-        OpcionDashboard("Stock por Bodega", "Consulta de stock por Bodega", Icons.Default.Warehouse, "consulta_bodega") ,
-        OpcionDashboard("Consulta de Nota Pedido ", "Consulta x Pedido de Venta", Icons.Default.Warehouse, "consulta_pedido"),
-        OpcionDashboard("Consulta de Picking ", "Consulta x Numero de Picking ", Icons.Default.Warehouse, "consulta_picking")
+        OpcionDashboard(
+            "Stock por Ubicacion",
+            "Consulta de stock por ubicacion",
+            Icons.Default.Place,
+            "consulta_ubicacion"
+        ),
+        OpcionDashboard(
+            "Stock por Item",
+            "Consulta de stock por Item",
+            Icons.Default.Search,
+            "consulta_stock"
+        ),
+        OpcionDashboard(
+            "Stock por Bodega",
+            "Consulta de stock por Bodega. Permite consultar el stock físico de los items por bodega y exportar los resultados a CSV.",
+            Icons.Default.Warehouse,
+            "consulta_bodega"
+        ),
+        OpcionDashboard(
+            "Consulta de Nota Pedido",
+            "Consulta x Pedido de Venta",
+            Icons.Default.Warehouse,
+            "consulta_pedido"
+        ),
+        OpcionDashboard(
+            "Consulta de Picking",
+            "Consulta x Numero de Picking",
+            Icons.Default.Warehouse,
+            "consulta_picking"
+        )
     )
 
     Column(
@@ -46,13 +71,16 @@ fun ConsultasScreen(navController: NavController) {
             .padding(16.dp)
     ) {
 
-        // 🔹 Header con botón volver + título
+        // ENCABEZADO
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth()
         ) {
-
-            IconButton(onClick = { navController.popBackStack() }) {
+            IconButton(
+                onClick = {
+                    navController.popBackStack()
+                }
+            ) {
                 Icon(
                     imageVector = Icons.Default.ArrowBack,
                     contentDescription = "Volver"
@@ -68,12 +96,16 @@ fun ConsultasScreen(navController: NavController) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        // LISTA DE OPCIONES
         LazyVerticalGrid(
             columns = GridCells.Fixed(1),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             items(opciones) { opcion ->
-                CardOpcion(opcion, navController)
+                CardOpcion(
+                    opcion,
+                    navController
+                )
             }
         }
     }

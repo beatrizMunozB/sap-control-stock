@@ -134,6 +134,7 @@ import com.makita.controlstock.data.network.TransferenciaResponse
 import com.makita.controlstock.mostrarDialogo
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import com.makita.controlstock.session.Sesion
 
 val fechaHoy = LocalDate.now()
     .format(DateTimeFormatter.ISO_DATE)
@@ -461,7 +462,7 @@ fun TrasladosSalidaScreen(usuario: String) {
         // -------- CARGA BODEGA POR DEFECTO --------
         LaunchedEffect(Unit) {
             try {
-                val response = apiService.obtenerBodegaOrigen()
+                val response = apiService.obtenerBodegaOrigen(Sesion.bodega)
                 val def = response.firstOrNull { it.IsDefault == 1 }
                 if (def != null) {
                     bodegaOrigen = def.WhsCode
